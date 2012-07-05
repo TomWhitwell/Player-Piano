@@ -1,9 +1,7 @@
 
 /*
 
-attept second order markov chain
 
-next - attempt to integrate with music player 
 
 */
 
@@ -17,10 +15,13 @@ int stepcount;
 byte modechoice;
 byte noteplay;
 #define arraysize 16
-#define tempo 350
+#define tempo 200
 #define seqlength 16
 boolean fill=true;
 byte seqstep;
+boolean think=true;
+int think_time = 20000;
+int increment=5; // how many the count goes up in the chain each time a note is played 
 /*
 LOOKUP TABLES 
 */
@@ -28,13 +29,13 @@ LOOKUP TABLES
 //QUANTISATION 
 byte notes[8][12]= {
   {0,1,2,3,4,5,6,7,8,9,10,11    },   // chromatic 
-  {0,2,4,6,8,10,12    }, //whole tone 
-  { 0,3,5,6,7,10,12    }, // blues 
-  { 0,1,3,5,7,9,10,12    }, // javanese
-  { 0,2,3,5,7,8,10,12    }, // minor 
-  { 0,2,3,5,7,8,11,12    }, // harmonic minor 
-  {0,2,4,5,6,8,10,12    }, // arabian 
-  { 0,2,4,5,8,9,11,12    }, // harmonic major 
+  {0,2,4,6,8,10,12,14    }, //whole tone 
+  { 0,3,5,6,7,10,12,15    }, // blues 
+  { 0,1,3,5,7,9,10,12,13    }, // javanese
+  { 0,2,3,5,7,8,10,12,14    }, // minor 
+  { 0,2,3,5,7,8,11,12,14    }, // harmonic minor 
+  {0,2,4,5,6,8,10,12,14    }, // arabian 
+  { 0,2,4,5,8,9,11,12,14    }, // harmonic major 
 };  
 
 byte odds[arraysize]={
@@ -51,17 +52,29 @@ byte odds[arraysize]={
 byte sequence[2][arraysize];
 
 void setup() {
-  // put your setup code here, to run once:
-// Serial.begin(9600); // debug 
-  Serial.begin(31250); // midi 
+ Serial.begin(9600); // debug 
+//  Serial.begin(31250); // midi 
   
   fillchain();
 randomSeed(analogRead(0));
-modechoice=random(7);
+modechoice=1;
 }
 
 void loop() {
 
+  if(think==true){
+   for(int i=0;i<think_time;i++){
+      oldernote=oldnote;
+  oldnote=newnote; 
+//newnote=random(chain_size);
+newnote = choose_note(oldnote,oldernote);
+update_chain(newnote,oldnote,oldernote);
+
+   } 
+    think=false; 
+  }
+  
+  
 //  if (random(100)<odds[seqstep]){
   
   
@@ -73,25 +86,27 @@ newnote = choose_note(oldnote,oldernote);
 update_chain(newnote,oldnote,oldernote);
 
 noteOn(0x90, quantize(modechoice,newnote,5),30+random(60));
-if(newnote==1 && oldnote == 3){
-delay(10);
-  noteOn(0x90, quantize(modechoice,newnote,7),60+random(60));
-  noteOn(0x90, quantize(modechoice,newnote,6),60+random(60));
- 
-}
-
-if(random(100)<20){
-delay(10);
-  noteOn(0x90, quantize(modechoice,oldernote,3),10+random(60));
-}
 
 
-if(random(100)<50){
-delay(10);
-  noteOn(0x90, quantize(modechoice,oldernote,5),0);
-}
-
-
+//if(newnote==1 && oldnote == 3){
+//delay(10);
+//  noteOn(0x90, quantize(modechoice,newnote,7),60+random(60));
+//  noteOn(0x90, quantize(modechoice,newnote,6),60+random(60));
+// 
+//}
+//
+//if(random(100)<20){
+//delay(10);
+//  noteOn(0x90, quantize(modechoice,oldernote,3),10+random(60));
+//}
+//
+//
+//if(random(100)<50){
+//delay(10);
+//  noteOn(0x90, quantize(modechoice,oldernote,5),0);
+//}
+//
+//
 
 
 
@@ -99,12 +114,7 @@ seqstep++;
 //  }
 delay(tempo);
 
-for(byte i=0;i<7;i++){
- noteOn(0x90, quantize(modechoice,i,5),0);
- noteOn(0x90, quantize(modechoice,i,3),0);
- noteOn(0x90, quantize(modechoice,i,4),0);
 
-}
 
 
 if (seqstep>seqlength){
@@ -153,7 +163,9 @@ markov[x][y]=1;
 
 void update_chain(byte newer, byte older, byte oldest){
   if(markov[oldest*chain_size+older][newer]<max_count){
-    markov[oldest*chain_size+older][newer]++;
+//    markov[oldest*chain_size+older][newer]++;
+markov[oldest*chain_size+older][newer] = markov[oldest*chain_size+older][newer]+increment;
+
   }
 }
 
@@ -200,17 +212,21 @@ FUNCTIONS
 //  plays a MIDI note.  Doesn't check to see that
 //  cmd is greater than 127, or that data values are  less than 127:
 void noteOn(int cmd, int pitch, int velocity) {
-  Serial.write(cmd);
-  Serial.write(pitch);
-  Serial.write(velocity);
+//  Serial.write(cmd);
+//  Serial.write(pitch);
+//  Serial.write(velocity);
 }
 
 // Quantizer 
 
 byte quantize(int scale, int note, int octave){
+  Serial.print("Quantize input: ");
+  Serial.print(note);
+  Serial.print(" output: ");
+  Serial.println(notes[scale][note]);
   return octave*12+notes[scale][note]; 
+
+  
 }
-
-
 
 

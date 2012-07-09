@@ -14,6 +14,7 @@ Prototype for third order chain
 // number of orders of chain - this code suggests 
 #define chain_order 3
 #define max_count 30000
+#define multiplier 10 // how much is added each time, defines strength of chain 
 byte chain_initial_state=1;
 
 // one more dimension than the chain size 
@@ -34,11 +35,15 @@ Serial.begin(115200);
 // fills chains with something at setup  
 fillchain(chain_initial_state);
 
-//add random notes to start of chain;
+//add random notes to start of note store, to input to chain;
+Serial.print ("Init notes ");
 for (int i=0;i<chain_order;i++){
  note_store[i]=random(chain_size); 
+Serial.print (note_store[i]);
+Serial.print (" | ");
 }
-
+Serial.println ("|");
+Serial.print ("Generated notes:");
 
 randomSeed(analogRead(0));
 
@@ -47,91 +52,74 @@ randomSeed(analogRead(0));
 
 void loop() {
 
+// add a new chain-generated note to the end of the note store 
+note_store[4] = choose_note(note_store[1],note_store[2],note_store[3]);
 
-  
-  
-  
-  
-update_chain(newnote,oldnote);
-if(stepcount%2000==0){
-Serial.print("Step ");
-Serial.println(stepcount);
-drawchain();
-}
+// print the new note 
+Serial.print(note_store[4]);
+Serial.print(" | ");
+ 
+// update the chain 
+update_chain(note_store[1],note_store[2],note_store[3],note_store[4]);
 
-if (stepcount>20000){
- delay(100000); 
-}
+delay(500);
   stepcount++;
 }
 
 
 
+//// DRAW OUT THE CHAIN - NEEDS FIXING 
+//void drawchain(){
+//  for(int z=0;z<chain_order;z++){
+//for(int x=0; x<chain_size; x++){
+// for (int y = 0; y< chain_size; y++){
+//     Serial.print(markov[x][y][z]);
+//   Serial.print(",");
+// }
+// Serial.println(" ");
+//}
+//Serial.println("--end of order--");
+//}
+//Serial.println("__end of iteration__");   
+//}
 
-void drawchain(){
-  for(int z=0;z<chain_order;z++){
-for(int x=0; x<chain_size; x++){
- for (int y = 0; y< chain_size; y++){
-     Serial.print(markov[x][y][z]);
-   Serial.print(",");
- }
- Serial.println(" ");
-}
-Serial.println("--end of order--");
-}
-Serial.println("__end of iteration__");   
-}
 
-
+// FILL THE CHAIN WITH INITIAL CONTENT - ONLY WORKS WITH 3RD GEN CHAINS 
 void fillchain(byte chain_initial_content){
 for(int q=0;q<chain_size;q++){
 for(int z=0;z<chain_size;z++){
 for(int x=0; x<chain_size; x++){
  for (int y = 0; y< chain_size; y++){
 markov[q][x][y][z]=chain_initial_content;
- }
 }
-    }
+}
+}
 }
 }
 
-void update_chain(byte newer, byte older){
-  if(markov[older][newer]<max_count){
-    markov[older][newer]++;
+// ADD THE NEW NOTE TO THE CHAIN 
+void update_chain(byte a, byte b, byte c, byte d){
+  if(markov[a][b][c][d]<max_count){
+    markov[a][b][c][d] = markov[a][b][c][d]+multiplier;
   }
 }
 
-byte choose_note(byte last_note){
+// LET THE CHAIN CHOOSE A NEW NOTE 
+byte choose_note(byte a, byte b, byte c){
+  
+//  count the total hits in the relevant chain 
   int total=0;
   for (byte y=0;y<chain_size;y++){
-   total=total+markov[last_note][y]; 
+   total=total+markov[a][b][c][y]; 
   }
 
 
-
+// pick and return a new number, based on weighted dice throw 
 int running_total=0;
 int random_number = random(total+1);
 for( byte i=0; i<chain_size; i++){
- running_total=running_total+markov[last_note][i];
+ running_total=running_total+markov[a][b][c][i];
   if (random_number<=running_total){
-
-    /*
-    // DEBUG ROUTINE 
-    
-if (stepcount%50==0){
- Serial.print("Choose_note routine: Total=");
- Serial.print(total);
-Serial.print(" Running_total=");
-Serial.print(running_total);
-Serial.print(" Random_number=");
-Serial.print(random_number);
-Serial.print(" result=");
-Serial.println(i);
-}
-
-*/
-
-
     return i;
     break;
   }

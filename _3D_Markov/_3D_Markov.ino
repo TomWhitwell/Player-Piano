@@ -2,31 +2,56 @@
 /*
 
 Working first order markov chain
-
 next - add multiple orders using 3d arrays 
 
+Prototype for third order chain 
 
 */
 
-#define chain_size 7
+
+// number of possible states 
+#define chain_size 3
+// number of orders of chain - this code suggests 
+#define chain_order 3
 #define max_count 30000
-int markov[chain_size][chain_size];
-byte oldnote; 
-byte newnote=random(chain_size); 
+byte chain_initial_state=1;
+
+// one more dimension than the chain size 
+// if max_count > 256, use int, otherwise use byte 
+int markov[chain_size][chain_size][chain_size][chain_size];
+
+//Holder for notes in play, 
+byte note_store[chain_size+1];
+
+
 int stepcount;
 
 
 void setup() {
-  // put your setup code here, to run once:
+
 Serial.begin(115200);
-fillchain();
+
+// fills chains with something at setup  
+fillchain(chain_initial_state);
+
+//add random notes to start of chain;
+for (int i=0;i<chain_order;i++){
+ note_store[i]=random(chain_size); 
+}
+
+
 randomSeed(analogRead(0));
+
+
 }
 
 void loop() {
-oldnote=newnote; 
-//newnote=random(chain_size);
-newnote = choose_note(oldnote);
+
+
+  
+  
+  
+  
 update_chain(newnote,oldnote);
 if(stepcount%2000==0){
 Serial.print("Step ");
@@ -44,22 +69,29 @@ if (stepcount>20000){
 
 
 void drawchain(){
+  for(int z=0;z<chain_order;z++){
 for(int x=0; x<chain_size; x++){
  for (int y = 0; y< chain_size; y++){
-     Serial.print(markov[x][y]);
+     Serial.print(markov[x][y][z]);
    Serial.print(",");
  }
  Serial.println(" ");
 }
-Serial.println("___________________");   
+Serial.println("--end of order--");
+}
+Serial.println("__end of iteration__");   
 }
 
 
-void fillchain(){
+void fillchain(byte chain_initial_content){
+for(int q=0;q<chain_size;q++){
+for(int z=0;z<chain_size;z++){
 for(int x=0; x<chain_size; x++){
  for (int y = 0; y< chain_size; y++){
-markov[x][y]=1;
+markov[q][x][y][z]=chain_initial_content;
  }
+}
+    }
 }
 }
 

@@ -1,25 +1,22 @@
 
 /*
 
-Working first order markov chain
-next - add multiple orders using 3d arrays 
-
-Prototype for third order chain 
+Working third order chain, but 
 
 */
 
 
 // number of possible states 
-#define chain_size 3
+#define chain_size 6
 // number of orders of chain - this code suggests 
 #define chain_order 3
-#define max_count 30000
-#define multiplier 10 // how much is added each time, defines strength of chain 
+#define max_count 256
+byte multiplier = 2; // how much is added each time, defines strength of chain 
 byte chain_initial_state=1;
 
 // one more dimension than the chain size 
 // if max_count > 256, use int, otherwise use byte 
-int markov[chain_size][chain_size][chain_size][chain_size];
+byte markov[chain_size][chain_size][chain_size][chain_size];
 
 //Holder for notes in play, 
 byte note_store[chain_size+1];
@@ -29,6 +26,7 @@ int stepcount;
 
 
 void setup() {
+randomSeed(analogRead(0));
 
 Serial.begin(115200);
 
@@ -40,12 +38,13 @@ Serial.print ("Init notes ");
 for (int i=0;i<chain_order;i++){
  note_store[i]=random(chain_size); 
 Serial.print (note_store[i]);
-Serial.print (" | ");
+Serial.print (" ");
 }
-Serial.println ("|");
+Serial.println (" ");
 Serial.print ("Generated notes:");
 
-randomSeed(analogRead(0));
+
+
 
 
 }
@@ -53,16 +52,26 @@ randomSeed(analogRead(0));
 void loop() {
 
 // add a new chain-generated note to the end of the note store 
-note_store[4] = choose_note(note_store[1],note_store[2],note_store[3]);
+note_store[3] = choose_note(note_store[0],note_store[1],note_store[2]);
 
 // print the new note 
-Serial.print(note_store[4]);
-Serial.print(" | ");
- 
-// update the chain 
-update_chain(note_store[1],note_store[2],note_store[3],note_store[4]);
+Serial.print(note_store[3]);
+Serial.print(" ");
+if (note_store[3] == 0){Serial.println("");};
 
-delay(500);
+// update the chain 
+update_chain(note_store[0],note_store[1],note_store[2],note_store[3]);
+
+// progress the note store
+for (int i=0;i<chain_size;i++){
+ note_store[i] = note_store[i+1]; 
+}
+
+delay(20);
+//if (stepcount>4){
+// Serial.println(" ");
+//stepcount = 0; 
+//}
   stepcount++;
 }
 
@@ -102,6 +111,7 @@ void update_chain(byte a, byte b, byte c, byte d){
   if(markov[a][b][c][d]<max_count){
     markov[a][b][c][d] = markov[a][b][c][d]+multiplier;
   }
+  else{Serial.print("x");}
 }
 
 // LET THE CHAIN CHOOSE A NEW NOTE 

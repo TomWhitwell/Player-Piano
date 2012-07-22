@@ -1,0 +1,21 @@
+Schematic 
+
+PWM voltage/audio output - 3.5mm jack 
+Black = GND 
+Red = Digital pin 7 
+
+MIDI output 
+Pink = 5v via 220 ohm resistor, pin 4  
+Black = GND 
+Yellow = Serial TX1, pin 5
+
+LEDs 
+Red = dig 46
+Green middle = Digi 45 
+Green end = Digi 44 
+
+Pots 
+
+0 | 1 | 2 
+3 | 4 | 5 
+

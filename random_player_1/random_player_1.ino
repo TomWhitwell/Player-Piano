@@ -4,6 +4,12 @@ Random piano sequencer
  Notes on this version: 
  - sequencer looping
  
+ Knobs: 
+ 
+ 0 = tempo
+ 3 = tweaks +/- 2 notes on playback, positiion = probability 
+ 5 & 6 = min and max velocity
+ 
  
  Schematic:  
  
@@ -18,16 +24,19 @@ GLOBAL VARIABLES
 byte modechoice;
 byte noteplay;
 #define arraysize 128
-#define tempo 60
+#define modecount 8
+int tempo  = 60;
+int maxtempo=0;
+int mintempo = 200;
 boolean fill=true;
-
+boolean debug = true; 
 
 /*
 LOOKUP TABLES 
 */
 
 //QUANTISATION 
-byte notes[8][12]= {
+byte notes[modecount][12]= {
   {0,1,2,3,4,5,6,7,8,9,10,11    },   // chromatic 
   {0,2,4,6,8,10,12    }, //whole tone 
   { 0,3,5,6,7,10,12    }, // blues 
@@ -56,9 +65,9 @@ byte sequence[2][arraysize];
 
 void setup() {
   //  Set MIDI baud rate:
-// Serial.begin(9600); // debug 
-  Serial.begin(31250); // midi 
-   randomSeed(analogRead(0));
+Serial.begin(28800); // debug 
+  Serial1.begin(31250); // midi 
+   randomSeed(analogRead(9));
 }
 
 
@@ -69,9 +78,15 @@ MAIN LOOP
 void loop() {
 
 
+  
+  
 
+
+// FIRST PLAY, FILL UP THE SEQUENCE  
 if(fill == true){
-modechoice=random(7);
+
+  // Random or fixed scale selection 
+modechoice=random(modecount);
 //modechoice=3;
 
 for(int seqstep=0;seqstep<arraysize;seqstep++){    
@@ -85,10 +100,19 @@ sequence[1][seqstep]= random(odds[seqstep]+27);
 }
 fill = false;
 }
+
+
+
 else{
 
+// AFTER FIRST FILL, STEP THROUGH THE SEQUENCE  
+  
 for(int seqstep=0;seqstep<arraysize;seqstep++){    
         noteOn(0x90, sequence[0][seqstep],sequence[1][seqstep]);
+        
+          tempo = map(analogRead(0),0,1024,mintempo,maxtempo);
+//  if (debug == true){Serial.print("tempo=");Serial.println(tempo);};
+        
 delay(tempo);
 }  
 
@@ -113,9 +137,38 @@ FUNCTIONS
 //  plays a MIDI note.  Doesn't check to see that
 //  cmd is greater than 127, or that data values are  less than 127:
 void noteOn(int cmd, int pitch, int velocity) {
-  Serial.write(cmd);
-  Serial.write(pitch);
-  Serial.write(velocity);
+  
+  // note scale break, with pot 2
+  if (analogRead(2)>random(1024) && velocity>0){
+   pitch = pitch-2+random(4);
+  if (debug==true){Serial.println("TWEAK");}; 
+  }
+
+if (velocity>0){  
+  byte minvelocity = map(analogRead(4),0,1024,1,127);
+  byte maxvelocity = map(analogRead(5),0,1024,minvelocity,127);
+    if (debug==true){
+    Serial.print("minvelocity=");
+    Serial.print(minvelocity);
+    Serial.print(" maxvelocity=");
+    Serial.println(maxvelocity);
+    
+    Serial.print("pre_velocity=");Serial.print(velocity);}; 
+if (velocity<=minvelocity){velocity=minvelocity;};
+if (velocity>=maxvelocity){velocity=maxvelocity;};
+    if (debug==true){Serial.print(" post_velocity=");Serial.println(velocity);}; 
+}
+  
+  Serial1.write(cmd);
+  Serial1.write(pitch);
+  Serial1.write(velocity);
+  
+  if (debug == true && velocity>0){  
+  Serial.print("Pitch ");
+  Serial.print(pitch);
+  Serial.print(" Velocity ");
+  Serial.println(velocity);
+  }
 }
 
 // Quantizer 

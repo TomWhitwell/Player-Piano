@@ -6,7 +6,8 @@ Random piano sequencer
  
  Knobs: 
  0 = tempo
- 3 = tweaks +/- 2 notes on playback, positiion = probability 
+ 1 = number of notes changed each 128 note cycle
+ 2 = tweaks +/- 2 notes on playback, positiion = probability 
  5 & 6 = min and max velocity
  
  
@@ -35,6 +36,8 @@ boolean debug = false;
 #define density 100 // 100 = average, 200 = low, 50 = high 
 #define oddsCount 6
 byte oddsChoice;
+byte LongShort;
+byte BaseTime;
 
 /*
 LOOKUP TABLES 
@@ -65,7 +68,7 @@ byte notes[modecount][12]= {
 /* Rhythm system: 
 0 = 4/4
 1 = clock divisions 
-2 = no rhythm 
+2 = samba
 3 = 3/4
 4 = cuban
 5 = bossanova 
@@ -77,7 +80,7 @@ byte odds[oddsCount][arraysize]={
 },{
 95,5,95,5,95,5,95,5,95,5,5,5,95,5,5,5,95,5,5,5,95,5,5,5,95,5,5,5,5,5,5,5,95,5,5,5,5,5,5,5,95,5,5,5,5,5,5,5,95,5,5,5,5,5,5,5,95,95,95,95,95,95,95,95,95,5,95,5,95,5,95,5,95,5,5,5,95,5,5,5,95,5,5,5,95,5,5,5,95,5,5,5,5,5,5,5,95,5,5,5,5,5,5,5,95,5,5,5,5,5,5,5,95,5,5,5,5,5,5,5,95,95,95,95,95,95,95,95,
 },{
-50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,50,
+95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,95,5,95,5,5,95,5,95,5,95,5,5,95,5,95,5,
 },{
 90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,90,20,20,20,20
 },{
@@ -113,20 +116,31 @@ MAIN LOOP
 void loop() {
 
 
-  
+  byte noteschange;
+byte playsteps = 16; // how many notes to play in each loop 
 
 
 // FIRST PLAY, FILL UP THE SEQUENCE  
 if(fill == true){
 
+  // CHOOSE INITIAL VARIABLES 
+  
   // Random or fixed scale selection 
 modechoice=random(modecount);
 //modechoice=3;
 
 // Random or fixed rhythm selection 
-//oddsChoice = random(oddsCount);
-modechoice = 4;
+oddsChoice = random(oddsCount);
+//modechoice = 4;
 
+
+//EXPERIMENTAL 
+// Choose divider for long/short stresses 
+LongShort = random(16);
+BaseTime = random(8);
+
+
+// FILL THE LOOP 
 for(int seqstep=0;seqstep<arraysize;seqstep++){    
 byte a=random(odds[oddsChoice][seqstep])/14;
        noteplay=quantize(modechoice, a, random(4)+4);
@@ -145,20 +159,20 @@ else{
 
 // AFTER FIRST FILL, STEP THROUGH THE SEQUENCE  
   
-for(int seqstep=0;seqstep<arraysize;seqstep++){    
+for(int seqstep=0;seqstep<playsteps;seqstep++){    
 byte randomNote = 0;
 
-// ***check pots 
+// ROUTINES TO CHECK THE KNOBS  
 // pot zero = tempo 
 tempo = map(analogRead(0),0,1024,mintempo,maxtempo);
   
-  // randomise notes, outside the quantisation, with pot 2
+  // RANDOMISE KNOB 
   if (analogRead(2)>random(1024)){
    randomNote = 2+random(4);
   if (debug==true){Serial.println("TWEAK");}; 
   }
  
- 
+ // VELOCITY HIGH/LOW KNOBS 
  byte velocity = sequence[1][seqstep];
  if (velocity>0){
   byte minvelocity = map(analogRead(4),0,1024,1,127);
@@ -166,17 +180,25 @@ tempo = map(analogRead(0),0,1024,mintempo,maxtempo);
  if (velocity<=minvelocity){velocity=minvelocity;};
 if (velocity>=maxvelocity){velocity=maxvelocity;};
  }
+ // CHANGE KNOB 
+noteschange = map(analogRead(1),0,1024,0,arraysize); 
+ 
+ // LOOP KNOB 
+ playsteps = (analogRead(3)/128)*8;
  
  // PLAY THE NOTE 
  
  // temporarily attach note duration to pot 3 for testing, or to tempo 
 // int notelength = analogRead(3);
 // int notelength = tempo;
- int notelength = tempo+(analogRead(3));
+// int notelength = tempo+(analogRead(3));
 // int notelength = seqstep*10;
 //int notelength = (127-velocity)*10;
 //int notelength = (127-sequence[0][seqstep])*10;
 //int notelength = tempo*2; 
+int notelength; 
+if (seqstep % LongShort == 0){notelength = random(2000)+tempo;} // play on specific note divisions 
+else {notelength = tempo*BaseTime;};
 
  
  
@@ -198,13 +220,19 @@ delay(tempo);
 
 }  
 
+
+// CHANGES BETWEEN ZERO AND ALL NOTES EACH CYCLE 
+
+for (int i = 0; i<noteschange; i++){
 byte changer=random(arraysize);
 byte a=random(odds[oddsChoice][changer])/14;
 noteplay=quantize(modechoice, a, random(4)+4);
+if(random(density)<odds[oddsChoice][changer]){
 sequence[0][changer]= noteplay;
 sequence[1][changer]= random(odds[oddsChoice][changer]+27);
 }
- 
+}
+} 
  
 }
 

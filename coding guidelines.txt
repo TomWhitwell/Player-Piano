@@ -1,0 +1,25 @@
+Coding guidelines 
+
+1. Never hard code real numbers - always use variables 
+2. Only abstract code if it helps what you're doing now, not for the sake of it 
+3. Give functions a clear purpose, i.e. draw_table better than do_analysis
+4. Turn long unwieldy scripts into short purposeful functions. 
+5. Make functions shy: inputs and outputs should be clear. 
+6. No line longer than 100 chars 
+7. Good variable names reduce need for comments 
+8. Use complete words, not abbreviations, for variable names
+9. Indent loops and functions by 4 spaces 
+10. Pad equals, commas, arithmetic with a space 
+11. Do complicated equations a step at a time to make them easier to read 
+12. Make variable names consistent 
+    UppercaseUppercase for library names 
+    lowercaseUppercase for functions
+    lowercase_uppercase for variables 
+    LOWERCASE_UPPERCASE for global variables  
+    Use Nouns for variables
+    Use Verbs for functions 
+
+13. Check for errors in the code to make it robust 
+
+
+ 

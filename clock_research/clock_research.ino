@@ -12,7 +12,7 @@ boolean flasher2 = HIGH;
 void setTimer(int beatsPerMinute){
   
   // sync period in milliSeconds
- int period = ((1000L * 60)/beatsPerMinute)/PPQ;
+ int period = ((1000L * 60)/beatsPerMinute)/(PPQ);
 
  
   FlexiTimer2::set(period, syncMIDI);
@@ -26,7 +26,10 @@ Serial.begin(28800); // DEBUG
  
  pinMode(44, OUTPUT);
 }
-void loop(){}
+void loop(){
+
+
+}
 
 // Called by timer
 void syncMIDI()
@@ -48,4 +51,8 @@ void flash1(){
 void flash2(){
  digitalWrite(44, flasher2);
  flasher2 = !flasher2; 
+ 
+int update_clock = map(analogRead(0),0,1024,60,250);
+setTimer(update_clock);
+ 
 }

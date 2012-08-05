@@ -7,12 +7,36 @@ Random piano sequencer
  Knobs: 
  0 = tempo
  1 = number of notes changed each 128 note cycle
- 2 = tweaks +/- 2 notes on playback, positiion = probability 
+ 2 = mode selection 
  5 & 6 = min and max velocity
  3 = loop length 
  
 Schematic in pot_box_schematic 
  
+To do: 
+Create collection of note change functions; 
+	change note randomly (range)
+	change velocity randomly (range) 
+	change duration randomly (range) 
+	Change note/velocity/duration based on current value (is this a special case of markov below?)
+	remove note 
+	add new note (random note/velocity/duration) 
+	add new note (note/velocity/duration related to previous note(s) - markov)
+	Add new note (note/velocity/duration related to rhythm system)
+	Change all notes above/below a specific velocity 
+Create standard internal numbering system (i.e. 0-256) that can be applied to any variable.
+	ie create a LFO which can be applied to note/velocity/duration 
+	build markov chain around this variable
+		so you can repeat/learn velocity chains as easily as note chains 
+	BUT: How to connect 0-256 number with 0-7+0-8 note+octave system? 
+System to change a particular global variable for a period 
+	i.e. change base note / mode / tempo for n bars, then revert 
+	Is it a temporary change vs a permanent change - maybe with a buffer to reverse the change? 
+Rework rhythm system - enable changes of rhythm 
+	(Could be covered by note change function above, i.e. ChangeVelocityByRhythm) 
+
+
+	
  */
 
 

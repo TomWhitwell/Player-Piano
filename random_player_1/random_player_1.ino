@@ -269,7 +269,7 @@ else {notelength = TEMPO*BASE_time;};
  // OCTAVE OVERRIDE VERSION 
 //   playNote(0x90, quantize(MODE_CHOICE, SEQUENCE[0][seqstep], octave_override)+randomNote,velocity,notelength);
        
- // OCTAVE OVERRIDE VERSION 
+ // NOTE OVERRIDE VERSION 
 //   playNote(0x90, quantize(MODE_CHOICE, note_override, SEQUENCE[1][seqstep])+randomNote,velocity,notelength);
  
 

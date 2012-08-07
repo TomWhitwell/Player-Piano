@@ -86,7 +86,7 @@ int REPEAT_COUNT;
 
 
 byte LONG_SHORT;
-byte BASE_time; // multiplier for note lengths 
+byte BASE_TIME; // multiplier for note lengths 
 
 // holder for the SEQUENCE 
 #define SEQUENCE_LAYERS 3 
@@ -113,9 +113,7 @@ byte MODES[MODE_COUNT][12]= {
   { 0,2,3,5,7,8,10,12    }, // minor 
   { 0,2,3,5,7,8,11,12    }, // harmonic minor
   {  0,3,5,7,10,12,15,   }, // pentatonic minor  
-  
-  {  0,2,3,5,6,8,9,11   }, //  diminished 
-  
+  {  0,2,3,5,6,8,9,11   }, //  diminished
   {0,2,4,6,8,10,12    }, //whole tone 
   { 0,3,5,6,7,10,12    }, // blues 
   { 0,1,3,5,7,9,10,12    }, // javanese
@@ -126,9 +124,6 @@ byte MODES[MODE_COUNT][12]= {
   {   0,1,4,5,7,8,11,12  }, //  gypsy
   {   0,2,3,5,7,9,10,12  }, // dorian 
   {  0,2,4,5,7,8,11,12   }, // ethiopian 
- 
-  
-  
 };  
 
 /* Rhythm system: 
@@ -161,7 +156,7 @@ void setup() {
   //  Set MIDI baud rate:
 Serial.begin(28800); // DEBUG 
   Serial1.begin(31250); // midi 
-   randomSeed((analogRead(9)+analogRead(10)+analogRead(11))/3);
+   randomSeed(analogRead(9));
  pinMode(redLED,OUTPUT);
  pinMode(greenLED1,OUTPUT);
  pinMode(greenLED2,OUTPUT);
@@ -175,165 +170,56 @@ MAIN LOOP
 
 void loop() {
 
+byte changes;
+byte loop_length = 16;
 
-      
-  
-  
-  
-  
-
-  byte MODESchange;
-byte playsteps = 16; // how many MODES to play in each loop 
-
-
-// FIRST PLAY, FILL UP THE SEQUENCE  
 if(FILL == true){
-
-  // CHOOSE INITIAL VARIABLES 
-  
-  // Random or fixed scale selection 
-MODE_CHOICE=random(MODE_COUNT);
-//MODE_CHOICE=3;
-
-// Random or fixed rhythm selection 
-ODDS_CHOICE = random(ODDS_COUNT);
-//MODE_CHOICE = 4;
-
-// select density
-DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY;
-
-//EXPERIMENTAL 
-// Choose divider for long/short stresses 
-LONG_SHORT = random(16);
-BASE_time = random(16);
-
-
+randomiseValues();
 fillRandom();
-
 FILL = false;
 }
 
-
-
 else{
 
-// AFTER FIRST FILL, STEP THROUGH THE SEQUENCE  
-  
-for(int seqstep=0;seqstep<playsteps;seqstep++){    
-byte randomNote = 0;
+  for(int seqstep=0;seqstep<loop_length;seqstep++){   
 
-// ROUTINES TO CHECK THE KNOBS  
-// pot zero = TEMPO 
 TEMPO = map(analogRead(0),0,1024,MIN_TEMPO,MAX_TEMPO);
- 
- // Knob 2
- 
-  // RANDOMISE KNOB 
-//  if (analogRead(2)>random(1024)){
-//   randomNote = -2+random(4);
-//  if (DEBUG==true){Serial.println("TWEAK");}; 
-//  }
-//  
-// SCALE SELECTION KNOB 
-  MODE_CHOICE = map(analogRead(2),0,1024,0,MODE_COUNT);
- 
-// byte octave_override = map(analogRead(2),0,1024,0,10)+2;
-//  byte note_override = map(analogRead(2),0,1024,0,7);
+changes = map(analogRead(1),0,1024,0,ARRAY_SIZE); 
+MODE_CHOICE = map(analogRead(2),0,1024,0,MODE_COUNT);
+loop_length = (analogRead(3)/128)*8;
 
- 
- // VELOCITY HIGH/LOW KNOBS 
- byte velocity = SEQUENCE[2][seqstep];
- if (velocity>0){
-  byte minvelocity = map(analogRead(4),0,1024,1,127);
-  byte maxvelocity = map(analogRead(5),0,1024,minvelocity,127);
- if (velocity<=minvelocity){velocity=minvelocity;};
-if (velocity>=maxvelocity){velocity=maxvelocity;};
- }
+int velocity = getVelocity(SEQUENCE[2][seqstep]);
+int notelength = TEMPO*random(10);
 
-// // CHANGE KNOB 
-MODESchange = map(analogRead(1),0,1024,0,ARRAY_SIZE); 
-
-
- 
- // LOOP KNOB 
- playsteps = (analogRead(3)/128)*8;
- 
- // PLAY THE NOTE 
- 
- // TEMPOrarily attach note duration to pot 3 for testing, or to TEMPO 
-// int notelength = analogRead(3);
-// int notelength = TEMPO;
-// int notelength = TEMPO+(analogRead(3));
-// int notelength = seqstep*10;
-//int notelength = (127-velocity)*10;
-//int notelength = (127-SEQUENCE[0][seqstep])*10;
-//int notelength = TEMPO*2; 
-int notelength; 
-if (seqstep % LONG_SHORT == 0){notelength = random(8)*TEMPO;} // play on specific note divisions 
-else {notelength = TEMPO*BASE_time;};
-
- 
- 
-  playNote(0x90, quantize(MODE_CHOICE, SEQUENCE[0][seqstep], SEQUENCE[1][seqstep])+randomNote,velocity,notelength);
- 
- // OCTAVE OVERRIDE VERSION 
-//   playNote(0x90, quantize(MODE_CHOICE, SEQUENCE[0][seqstep], octave_override)+randomNote,velocity,notelength);
-       
- // NOTE OVERRIDE VERSION 
-//   playNote(0x90, quantize(MODE_CHOICE, note_override, SEQUENCE[1][seqstep])+randomNote,velocity,notelength);
+playNote(0x90, quantize(MODE_CHOICE, SEQUENCE[0][seqstep], SEQUENCE[1][seqstep]),velocity,notelength);
  
 
-
-//  if (DEBUG == true){Serial.print("TEMPO=");Serial.println(TEMPO);};
-
-if (seqstep%4==0){
-digitalWrite(greenLED1, HIGH);
-}
-else{
-digitalWrite(greenLED1, LOW);
-}
+if (seqstep%4==0){digitalWrite(greenLED1, HIGH);}
+else{digitalWrite(greenLED1, LOW);}
         
- noteKill();
+noteKill();
 delay(TEMPO);
 REPEAT_COUNT++;
 
-// EVERY 96 NOTES, FREEZE AND RANDOMISE 
+// EVERY 96 NOTES, FREEZE AND REFILL  
   if(REPEAT_COUNT==96){  
     freeze();
     fillRandom();}
     if(REPEAT_COUNT == 192){
       unFreeze();
       REPEAT_COUNT = 0;};
-
-
-
 }  
 
 
 // MAKE CHANGES 
 
-for (int i = 0; i<MODESchange; i++){
+for (int i = 0; i<changes; i++){
 byte changer=random(ARRAY_SIZE); // choose an entry to change 
 if(random(DENSITY)<ODDS[ODDS_CHOICE][changer] && SEQUENCE[2][changer]>0){ // if a rhythmically interesting note and non-silent 
-SEQUENCE[0][changer] = SEQUENCE[0][changer]+(random(3)-1);
-
-}
-}
-
-//for (int i = 0; i<MODESchange; i++){
-//byte changer=random(ARRAY_SIZE);
-//byte a=random(ODDS[ODDS_CHOICE][changer])/14;
-//noteplay=quantize(MODE_CHOICE, a, random(4)+4);
-//if(random(density)<ODDS[ODDS_CHOICE][changer]){
-//SEQUENCE[0][changer]= noteplay;
-//SEQUENCE[1][changer]= random(ODDS[ODDS_CHOICE][changer]+27);
-//}
-//}
-
+SEQUENCE[0][changer] = SEQUENCE[0][changer]+(random(3)-1);}}
 
 
 } 
-
 }
 
 
@@ -429,6 +315,25 @@ for(int seqstep=0;seqstep<ARRAY_SIZE;seqstep++){
     SEQUENCE[2][seqstep]= random(ODDS[ODDS_CHOICE][seqstep]+27); // velocity 
 }
 }
+}
+
+// READ VELOCITY POTS AND RETURN CORRECT VELOCITY 
+int getVelocity(int velocity){
+byte minvelocity = map(analogRead(4),0,1024,1,127);
+byte maxvelocity = map(analogRead(5),0,1024,minvelocity,127);
+if (velocity>0){
+if (velocity<=minvelocity){velocity=minvelocity;};
+if (velocity>=maxvelocity){velocity=maxvelocity;};
+}
+return velocity;
+}
+
+void randomiseValues(){
+ MODE_CHOICE=random(MODE_COUNT);
+ODDS_CHOICE = random(ODDS_COUNT);
+DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
+LONG_SHORT = random(16);
+BASE_TIME = random(16); 
 }
 
 

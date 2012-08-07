@@ -23,7 +23,9 @@ Create collection of note change functions;
 	add new note (random note/velocity/duration) 
 	add new note (note/velocity/duration related to previous note(s) - markov)
 	Add new note (note/velocity/duration related to rhythm system)
-	Change all MODES above/below a specific velocity 
+	Change all MODES above/below a specific velocity
+Create a system that allows new events to happen every n repetitions. 
+	i.e. not on every loop
 Create standard internal numbering system (i.e. 0-256) that can be applied to any variable.
 	ie create a LFO which can be applied to note/velocity/duration 
 	build markov chain around this variable
@@ -39,6 +41,7 @@ Rework timing system.
 Rework Quantise system to ensure it correctly handles differently-sized scales
 Rework Rhythm system to use smaller arrays 
 Create chord system, scanning current notes playing and running chords over the top
+X freeze() and unFreeze() = copies current loop into a buffer. Unfreeze copies it back into the live loop. 
 
 Experiments to try: 
         Create change systems for note/velocity/duration and attach them to knobs 
@@ -53,7 +56,7 @@ Experiments to try:
 GLOBAL VARIABLES 
 */
 byte MODE_CHOICE;
-#define MODE_COUNT 14
+#define MODE_COUNT 18
 
 byte ODDS_CHOICE;
 #define ODDS_COUNT 6
@@ -79,11 +82,17 @@ boolean PRINT_SETTINGS = true;
 
 #define VOICE_COUNT 16 // maximum polyphony 
 
+int REPEAT_COUNT;
+
+
 byte LONG_SHORT;
 byte BASE_time; // multiplier for note lengths 
 
 // holder for the SEQUENCE 
-byte SEQUENCE[3][ARRAY_SIZE]; //0=note 1=octave 2=velocity  
+#define SEQUENCE_LAYERS 3 
+byte SEQUENCE[SEQUENCE_LAYERS][ARRAY_SIZE]; //0=note 1=octave 2=velocity  
+byte FROZEN_SEQUENCE[SEQUENCE_LAYERS][ARRAY_SIZE]; //0=note 1=octave 2=velocity  
+
 
 // arrays to manage note length/endings 
 byte NOTE_ON[VOICE_COUNT];
@@ -98,13 +107,19 @@ LOOKUP TABLES
 //QUANTISATION 
 byte MODES[MODE_COUNT][12]= {
   {0,1,2,3,4,5,6,7,8,9,10,11    },   // chromatic 
+  {   0,2,4,5,7,9,11,12  }, //  major 
+  { 0,2,4,5,8,9,11,12    }, // harmonic major 
+  {  0,2,4,7,9,12,14   }, //  pentatonic major 
+  { 0,2,3,5,7,8,10,12    }, // minor 
+  { 0,2,3,5,7,8,11,12    }, // harmonic minor
+  {  0,3,5,7,10,12,15,   }, // pentatonic minor  
+  
+  {  0,2,3,5,6,8,9,11   }, //  diminished 
+  
   {0,2,4,6,8,10,12    }, //whole tone 
   { 0,3,5,6,7,10,12    }, // blues 
   { 0,1,3,5,7,9,10,12    }, // javanese
-  { 0,2,3,5,7,8,10,12    }, // minor 
-  { 0,2,3,5,7,8,11,12    }, // harmonic minor 
   {0,2,4,5,6,8,10,12    }, // arabian 
-  { 0,2,4,5,8,9,11,12    }, // harmonic major 
   { 0,1,4,5,6,8,11,12    }, // persian 
   {  0,1,4,5,6,9,10,12   }, // oriental 
   {   0,1,4,5,7,8,10,12  }, // jewish 
@@ -112,7 +127,6 @@ byte MODES[MODE_COUNT][12]= {
   {   0,2,3,5,7,9,10,12  }, // dorian 
   {  0,2,4,5,7,8,11,12   }, // ethiopian 
  
-//  {     }, //  
   
   
 };  
@@ -162,6 +176,12 @@ MAIN LOOP
 void loop() {
 
 
+      
+  
+  
+  
+  
+
   byte MODESchange;
 byte playsteps = 16; // how many MODES to play in each loop 
 
@@ -188,18 +208,8 @@ LONG_SHORT = random(16);
 BASE_time = random(16);
 
 
-// FILL THE LOOP 
-for(int seqstep=0;seqstep<ARRAY_SIZE;seqstep++){
- 
-    byte newnote=random(7);
-    byte newoctave = random(5)+3;
-    if(random(DENSITY)<ODDS[ODDS_CHOICE][seqstep]){
-    SEQUENCE[0][seqstep]= newnote; // note 
-    SEQUENCE[1][seqstep]= newoctave;  // octave 
-    SEQUENCE[2][seqstep]= random(ODDS[ODDS_CHOICE][seqstep]+27); // velocity 
+fillRandom();
 
-}
-}
 FILL = false;
 }
 
@@ -285,6 +295,17 @@ digitalWrite(greenLED1, LOW);
         
  noteKill();
 delay(TEMPO);
+REPEAT_COUNT++;
+
+// EVERY 96 NOTES, FREEZE AND RANDOMISE 
+  if(REPEAT_COUNT==96){  
+    freeze();
+    fillRandom();}
+    if(REPEAT_COUNT == 192){
+      unFreeze();
+      REPEAT_COUNT = 0;};
+
+
 
 }  
 
@@ -377,7 +398,37 @@ byte quantize(int scale, int note, int octave){
   return octave*12+MODES[scale][note]; 
 }
 
+// FREEZE / UNFREEZE 
 
+void freeze(){
+ for(int i=0;i<ARRAY_SIZE;i++){
+ for(int x=0;x<SEQUENCE_LAYERS;x++){ 
+   FROZEN_SEQUENCE[x][i] =SEQUENCE [x][i];
+ }} 
+digitalWrite(greenLED2, HIGH); 
+}
 
+void unFreeze(){
+ for(int i=0;i<ARRAY_SIZE;i++){
+ for(int x=0;x<SEQUENCE_LAYERS;x++){ 
+   SEQUENCE [x][i]=FROZEN_SEQUENCE[x][i] ;
+ }}   
+digitalWrite(greenLED2, LOW); 
+
+}
+
+// FILL ENTIRE LOOP WITH RANDOM NOTES 
+
+void fillRandom(){
+for(int seqstep=0;seqstep<ARRAY_SIZE;seqstep++){
+    byte newnote=random(7);
+    byte newoctave = random(5)+3;
+    if(random(DENSITY)<ODDS[ODDS_CHOICE][seqstep]){
+    SEQUENCE[0][seqstep]= newnote; // note 
+    SEQUENCE[1][seqstep]= newoctave;  // octave 
+    SEQUENCE[2][seqstep]= random(ODDS[ODDS_CHOICE][seqstep]+27); // velocity 
+}
+}
+}
 
 

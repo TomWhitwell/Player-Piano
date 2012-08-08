@@ -52,7 +52,7 @@ void flash2(){
  digitalWrite(44, flasher2);
  flasher2 = !flasher2; 
  
-int update_clock = map(analogRead(0),0,1024,60,250);
+int update_clock = map(analogRead(0),0,1024,60,550);
 setTimer(update_clock);
  
 }

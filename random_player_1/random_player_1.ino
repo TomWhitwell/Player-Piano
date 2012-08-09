@@ -1,3 +1,7 @@
+#include <FlexiTimer2.h>
+
+
+
 /*
 Random piano Sequencer 
   
@@ -55,9 +59,9 @@ Experiments to try:
 byte MODE_CHOICE;
 byte ODDS_CHOICE;
 byte noteplay;
-int TEMPO  = 60;
-int MAX_TEMPO=0;
-int MIN_TEMPO = 200;
+int TEMPO  = 120;
+int MAX_TEMPO=300;
+int MIN_TEMPO = 8;
 int DENSITY =100; // 100 = average, 200 = low, 50 = high
 int MAX_DENSITY = 200;
 int MIN_DENSITY = 10;
@@ -73,7 +77,16 @@ boolean PRINT_SETTINGS = true;
 #define redLED 46
 int REPEAT_COUNT;
 byte BASE_TIME; // multiplied by tempo for note lengths 
-int CONTROL_REFRESH = 50;
+int CONTROL_REFRESH = 2000;
+#define PPQ 24 // master PPQ of the sequencer 
+byte PLAY_DIVIDER = 3; //play a note every n parts 
+byte PLAY_COUNTER;
+long loop_count = 0; 
+
+long OLD;
+long NEW;
+
+
 
 // holder for the sequences  
 #define SEQUENCE_LAYERS 3 //0=note 1=octave 2=velocity
@@ -131,17 +144,22 @@ byte ODDS[ODDS_COUNT][ARRAY_SIZE]={
 {95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,95,5,5,95,5,5,95,5,5,5,95,5,5,95,5,5,}};
 
 
+
 //*************
 //  SETUP  
 //*************
 
 void setup() {
-    Serial.begin(28800); // DEBUG 
+    Serial.begin(115200); // DEBUG 
     Serial1.begin(31250); // midi 
     randomSeed(analogRead(9));
     pinMode(redLED,OUTPUT);
     pinMode(greenLED1,OUTPUT);
     pinMode(greenLED2,OUTPUT);
+    setTimer(TEMPO);
+  FlexiTimer2::start(); 
+
+
 }
 
 
@@ -150,9 +168,7 @@ void setup() {
 //*************
 
 void loop() {
-static long loop_count = 0; 
 
-  // need to set up loop, removing for loop around step, to enable external interrupt timer 
 
 if(FILL == true){
 randomiseValues();
@@ -164,17 +180,7 @@ if (loop_count%CONTROL_REFRESH == 0){
 readKnobs();
 }
 
-if (loop_count%TEMPO == 0){
 
-byte velocity = getVelocity(SEQUENCE[2][SEQUENCE_STEP]);
-byte note_length = TEMPO*random(10);
-byte this_note = quantize(MODE_CHOICE, SEQUENCE[0][SEQUENCE_STEP], SEQUENCE[1][SEQUENCE_STEP]);
-playNote(0x90, this_note,velocity,note_length);
-noteKill();
-if (SEQUENCE_STEP%4==0){digitalWrite(greenLED1, HIGH);}else{digitalWrite(greenLED1, LOW);}
-REPEAT_COUNT++;
-
-}
 
 // EVERY 96 NOTES, FREEZE AND REFILL  
   if(REPEAT_COUNT==96){  
@@ -186,19 +192,18 @@ REPEAT_COUNT++;
 
 
 // MAKE CHANGES EVERY 128 NOTES **NEED TO FIX THIS, WILL RUN EVERY NOTE, CAN SIMPLIFY TO CHANGE ONE NOTE EACH CYCLE 
+//
+//for (int i = 0; i<CHANGES; i++){
+//byte changer=random(ARRAY_SIZE); // choose an entry to change 
+//if(random(DENSITY)<ODDS[ODDS_CHOICE][changer] && SEQUENCE[2][changer]>0){ // if a rhythmically interesting note and non-silent 
+//SEQUENCE[0][changer] = SEQUENCE[0][changer]+(random(3)-1);}}
 
-for (int i = 0; i<CHANGES; i++){
-byte changer=random(ARRAY_SIZE); // choose an entry to change 
-if(random(DENSITY)<ODDS[ODDS_CHOICE][changer] && SEQUENCE[2][changer]>0){ // if a rhythmically interesting note and non-silent 
-SEQUENCE[0][changer] = SEQUENCE[0][changer]+(random(3)-1);}}
 
 
 
-SEQUENCE_STEP++;
-if (SEQUENCE_STEP>LOOP_LENGTH){
- SEQUENCE_STEP = 0; 
-}
 loop_count++;
+
+
 }
 
 
@@ -313,4 +318,37 @@ MIN_VELOCITY = map(analogRead(4),0,1024,1,127);
 MAX_VELOCITY = map(analogRead(5),0,1024,MIN_VELOCITY,127);
 
 }
+
+
+void setTimer(int beatsPerMinute){
+  
+  // sync period in milliSeconds
+ int period = ((1000L * 60)/beatsPerMinute)/(PPQ);
+  FlexiTimer2::set(period, playSequenceNote);
+  
+}
+
+
+void playSequenceNote(){
+if (PLAY_COUNTER == PLAY_DIVIDER){
+
+byte velocity = getVelocity(SEQUENCE[2][SEQUENCE_STEP]);
+byte note_length = ((1000L * 60)/TEMPO)/(PPQ)*random(10);
+byte this_note = quantize(MODE_CHOICE, SEQUENCE[0][SEQUENCE_STEP], SEQUENCE[1][SEQUENCE_STEP]);
+playNote(0x90, this_note,velocity,note_length);
+noteKill();
+if (SEQUENCE_STEP%4==0){digitalWrite(greenLED1, HIGH);}else{digitalWrite(greenLED1, LOW);}
+REPEAT_COUNT++;
+SEQUENCE_STEP++;
+if (SEQUENCE_STEP>LOOP_LENGTH){
+ SEQUENCE_STEP = 0; 
+}
+
+setTimer(TEMPO);
+  FlexiTimer2::start(); 
+PLAY_COUNTER = 0;
+}
+PLAY_COUNTER++;
+}
+
 

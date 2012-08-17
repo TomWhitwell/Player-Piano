@@ -62,6 +62,7 @@ byte noteplay;
 int TEMPO  = 120;
 int MAX_TEMPO=300;
 int MIN_TEMPO = 8;
+int PERIOD; 
 int DENSITY =100; // 100 = average, 200 = low, 50 = high
 int MAX_DENSITY = 200;
 int MIN_DENSITY = 10;
@@ -323,8 +324,8 @@ MAX_VELOCITY = map(analogRead(5),0,1024,MIN_VELOCITY,127);
 void setTimer(int beatsPerMinute){
   
   // sync period in milliSeconds
- int period = ((1000L * 60)/beatsPerMinute)/(PPQ);
-  FlexiTimer2::set(period, playSequenceNote);
+  PERIOD = ((1000L * 60)/beatsPerMinute)/(PPQ);
+  FlexiTimer2::set(PERIOD, playSequenceNote);
   
 }
 
@@ -333,7 +334,7 @@ void playSequenceNote(){
 if (PLAY_COUNTER == PLAY_DIVIDER){
 
 byte velocity = getVelocity(SEQUENCE[2][SEQUENCE_STEP]);
-byte note_length = ((1000L * 60)/TEMPO)/(PPQ)*random(10);
+int note_length = PERIOD*PLAY_DIVIDER*random(10);
 byte this_note = quantize(MODE_CHOICE, SEQUENCE[0][SEQUENCE_STEP], SEQUENCE[1][SEQUENCE_STEP]);
 playNote(0x90, this_note,velocity,note_length);
 noteKill();

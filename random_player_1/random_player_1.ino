@@ -400,15 +400,19 @@ MODE_CHOICE=random(MODE_COUNT);
 ODDS_CHOICE = random(ODDS_COUNT);
 DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
 BASE_TIME = random(16); 
+FILL = random(2);
 if (PRINT_SETTINGS == true){
 Serial.print(" Density = ");
 Serial.print(DENSITY);
+Serial.print(" fill = ");
+Serial.print(FILL);
 Serial.print(" Base Times = ");
 Serial.print(BASE_TIME);}
 Serial.print(" Rhythm = ");
 Serial.print(ODDS_NAMES[ODDS_CHOICE]);
 Serial.print(" Mode = ");
 Serial.println(MODE_NAMES[MODE_CHOICE]);
+
 }
 
 // READ KNOBS 
@@ -448,7 +452,6 @@ NOTE=true;
 if (SEQUENCE_STEP>LOOP_LENGTH){
  SEQUENCE_STEP = 0; 
  LOOP = true; 
- Serial.println("LOOP");
 }
 
 setTimer(TEMPO);

@@ -218,7 +218,7 @@ void playNote(byte cmd, byte pitch, byte velocity, int duration) {
 unsigned long time = millis();
 boolean found_slot = false;
 for (int i=0;i<VOICE_COUNT;i++){
-if (NOTE_ON[i] == 0){  
+if (NOTE_ON[i] == 0 || NOTE_ON[i] == pitch){  
   NOTE_ON[i] = pitch;
   NOTE_OFF[i] = time+duration;
   found_slot = true;
@@ -282,13 +282,13 @@ digitalWrite(greenLED2, LOW);
 // FILL ENTIRE LOOP WITH RANDOM NOTES 
 
 void fillRandom(){
-for(int SEQUENCE_STEP=0;SEQUENCE_STEP<ARRAY_SIZE;SEQUENCE_STEP++){
+for(int fill_step=0;fill_step<ARRAY_SIZE;fill_step++){
     byte newnote=random(7);
     byte newoctave = random(5)+3;
-    if(random(DENSITY)<ODDS[ODDS_CHOICE][SEQUENCE_STEP]){
-    SEQUENCE[0][SEQUENCE_STEP]= newnote; // note 
-    SEQUENCE[1][SEQUENCE_STEP]= newoctave;  // octave 
-    SEQUENCE[2][SEQUENCE_STEP]= random(ODDS[ODDS_CHOICE][SEQUENCE_STEP]+27); // velocity 
+    if(random(DENSITY)<ODDS[ODDS_CHOICE][fill_step]){
+    SEQUENCE[0][fill_step]= newnote; // note 
+    SEQUENCE[1][fill_step]= newoctave;  // octave 
+    SEQUENCE[2][fill_step]= random(ODDS[ODDS_CHOICE][fill_step]+27); // velocity 
 }}}
 
 //  RETURN VELOCITY WITHIN LIMITS SET BY POTS 
@@ -334,7 +334,8 @@ void playSequenceNote(){
 if (PLAY_COUNTER == PLAY_DIVIDER){
 
 byte velocity = getVelocity(SEQUENCE[2][SEQUENCE_STEP]);
-int note_length = PERIOD*PLAY_DIVIDER*random(10);
+
+int note_length = PERIOD*PLAY_DIVIDER*6;
 byte this_note = quantize(MODE_CHOICE, SEQUENCE[0][SEQUENCE_STEP], SEQUENCE[1][SEQUENCE_STEP]);
 playNote(0x90, this_note,velocity,note_length);
 noteKill();
@@ -350,6 +351,8 @@ setTimer(TEMPO);
 PLAY_COUNTER = 0;
 }
 PLAY_COUNTER++;
+
+
 }
 
 

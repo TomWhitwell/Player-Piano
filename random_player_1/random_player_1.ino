@@ -16,12 +16,12 @@ Schematic in pot_box_schematic
  
 To do: 
 Create collection of note change functions; 
-	change note randomly (range)
+	X change note randomly (range)
 	change velocity randomly (range) 
 	change duration randomly (range) 
 	Change note/velocity/duration based on current value (is this a special case of markov below?)
 	remove note 
-	add new note (random note/velocity/duration) 
+	X add new note (random note/velocity/duration) 
 	add new note (note/velocity/duration related to previous note(s) - markov)
 	Add new note (note/velocity/duration related to rhythm system)
 	Change all notes above/below a specific velocity
@@ -37,7 +37,7 @@ System to change a particular global variable for a period
 	Is it a temporary change vs a permanent change - maybe with a buffer to reverse the change? 
 Rework rhythm system - enable CHANGES of rhythm 
 	(Could be covered by note change function above, i.e. ChangeVelocityByRhythm)
-Rework timing system. 
+X Rework timing system. 
         Use 24ppq system, to enable midi clock output? 
 Rework Quantise system to ensure it correctly handles differently-sized scales
 Rework Rhythm system to use smaller arrays 
@@ -85,12 +85,21 @@ long loop_count = 0;
 
 long OLD;
 long NEW;
+byte NOTE_ACTION_1;
+byte NOTE_ACTION_2;
+byte LOOP_ACTION_1;
+byte LOOP_ACTION_2;
+
+
 
 // FLOW CONTROL 
 boolean START = true; 
 boolean FILL = false;
 boolean NOTE = false;
 boolean LOOP = false; 
+boolean SECTION = false; 
+int SECTION_LENGTH;
+int LOOPS_IN_SECTION = 16;
 
 
 
@@ -175,12 +184,18 @@ char ODDS_NAMES[ODDS_COUNT][15]=
   "Bossanova"};
 
 
+#define DIVIDER_COUNT 9
+int DIVIDERS[DIVIDER_COUNT] = 
+{1,2,4,8,16,32,16,48,8};
+
+
 //*************
 //  SETUP  
 //*************
 
 void setup() {
     Serial.begin(115200); // DEBUG 
+    Serial.println("**************");
     Serial1.begin(31250); // midi 
     randomSeed(analogRead(9));
     pinMode(redLED,OUTPUT);
@@ -204,33 +219,54 @@ readKnobs();}
 
 
 if(START == true){
+    Serial.println("START");
+
 randomiseValues();
+defineActions();
+
 START = false;
 }
 
 
 if(FILL == true){
+    Serial.println("FILL");
+
 fillRandom();
 FILL = false;
 }
 
 if (NOTE == true){
-  
-  
-  
+
+  selectAction(NOTE_ACTION_1, random(LOOP_LENGTH));
+  selectAction(NOTE_ACTION_2, random(LOOP_LENGTH));
+
+
 NOTE = false;  
 }
 
 
-if (LOOP == true){
-  addRandomNoteAt(random(LOOP_LENGTH));
-//  changeRandomNoteAt(random(LOOP_LENGTH));
-  incrementNoteAt(random(LOOP_LENGTH));
-  decrementNoteAt(random(LOOP_LENGTH));
-  
-LOOP = false;  
-}
+if (LOOP == true){Serial.println("LOOP");
 
+
+  selectAction(LOOP_ACTION_1, random(LOOP_LENGTH));
+  selectAction(LOOP_ACTION_2, random(LOOP_LENGTH));
+
+ 
+LOOP = false;  
+LOOPS_IN_SECTION++;
+if (LOOPS_IN_SECTION>SECTION_LENGTH-1){
+LOOPS_IN_SECTION = 0;
+SECTION = true;
+}}
+
+
+if (SECTION == true){ Serial.println("SECTION");
+ 
+defineActions();
+
+  
+ SECTION = false;  
+}
 
 
 loop_count++;
@@ -337,6 +373,22 @@ changeRandomNoteAt(note_position)
 
 incrementNoteAt(note_positon)
 = raises note by one, raising octave after 7 notes, looping through octaves 
+
+decrementNoteAt(note_position)
+= lowers note by one, reducing octave after 7 notes, looping through octaves 
+
+simplifyNoteAt(note_position)
+= Creates a note if there is not one, or changes an existing note. 
+If the rhythm step is >50, it creates a root note at octave 5
+
+repeatNoteBefore(note_position)
+= checks back for the last active note before the specified one. Does not loop around. 
+Repeats exactly and does not check rhythm before adding a note. 
+
+addRepeatedNote(note_position)
+= checks back for the last active note before the specified one. Does not loop around. 
+Checks rhythm and adds new note with same note/octave as the last, but new velocity. 
+
 */
 
 void addRandomNoteAt(int note_position){
@@ -376,11 +428,83 @@ if (SEQUENCE[0][note_position]==1){
   SEQUENCE[0][note_position] = 7;
   SEQUENCE[1][note_position]--;}
  else {SEQUENCE[0][note_position]--;};
- 
   if (SEQUENCE[1][note_position] < 3){
     SEQUENCE[1][note_position] = 8;
 }}}
 
+void simplifyNoteAt(int note_position){
+if(ODDS[ODDS_CHOICE][note_position]>50){
+ SEQUENCE[0][note_position] = 0;
+ SEQUENCE[1][note_position] = 5;
+ SEQUENCE[2][note_position] = 50;}
+ else{
+ SEQUENCE[0][note_position] = 0;
+ SEQUENCE[1][note_position] = 4;
+ SEQUENCE[2][note_position] = 40;}
+   
+ }
+
+  void repeatNoteBefore(int note_position){
+    if (note_position > 1){
+   for (int i=note_position-1; i>=0;i--){
+    if(SEQUENCE[2][i]>0){
+     for (int j = 0;j<SEQUENCE_LAYERS;j++){
+      SEQUENCE[j][note_position] = SEQUENCE[j][i];
+     }
+      break;
+  }}}}
+  
+  void addRepeatedNote(int note_position){
+    if (note_position > 1){
+   for (int i=note_position-1; i>=0;i--){
+    if(SEQUENCE[2][i]>0){
+         if(random(DENSITY)<ODDS[ODDS_CHOICE][note_position]){
+    SEQUENCE[0][note_position]= SEQUENCE[0][i]; // note 
+    SEQUENCE[1][note_position]= SEQUENCE[1][i];  // octave 
+    SEQUENCE[2][note_position]= random(ODDS[ODDS_CHOICE][note_position]+27); // velocity 
+         }
+    }
+      break;
+  }}}
+  
+
+void selectAction(byte choice, byte note_position){
+ switch (choice){
+   case 0:
+   addRandomNoteAt(note_position);
+   Serial.print(" add ");
+   break;
+   case 1:
+   changeRandomNoteAt(note_position);
+   Serial.print(" change ");
+   break;
+   case 2:
+   incrementNoteAt(note_position);
+      Serial.print(" up ");
+   break;
+   case 3:
+     decrementNoteAt(note_position); 
+           Serial.print(" down ");
+   break;
+   case 4:
+   addRepeatedNote(note_position);
+         Serial.print(" repeat ");
+   break;
+   case 5:
+   simplifyNoteAt(note_position);
+         Serial.print(" simplify ");
+   break;
+   case 6:
+ODDS_CHOICE = random(ODDS_COUNT);
+            Serial.print(" re-rhythm ");
+   break;
+   case 7:
+   FILL = true;
+            Serial.print (" fill ");
+
+   break;
+   
+ }}
 
 
 
@@ -400,7 +524,8 @@ MODE_CHOICE=random(MODE_COUNT);
 ODDS_CHOICE = random(ODDS_COUNT);
 DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
 BASE_TIME = random(16); 
-FILL = random(2);
+if (random(4)>1){FILL = true;}else{FILL = false;};
+SECTION_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 if (PRINT_SETTINGS == true){
 Serial.print(" Density = ");
 Serial.print(DENSITY);
@@ -410,9 +535,22 @@ Serial.print(" Base Times = ");
 Serial.print(BASE_TIME);}
 Serial.print(" Rhythm = ");
 Serial.print(ODDS_NAMES[ODDS_CHOICE]);
+Serial.print(" Section length = ");
+Serial.print(SECTION_LENGTH);
 Serial.print(" Mode = ");
 Serial.println(MODE_NAMES[MODE_CHOICE]);
+}
 
+// DEFINE ACTIONS 
+void defineActions(){
+ LOOP_ACTION_1 = random(9);
+Serial.print ("loop 1 = ");Serial.println(LOOP_ACTION_1);
+LOOP_ACTION_2 = random(9);
+Serial.print ("loop 2 = ");Serial.println(LOOP_ACTION_2);
+NOTE_ACTION_1 = random(5);
+Serial.print ("note 1 = ");Serial.println(NOTE_ACTION_1);
+NOTE_ACTION_2 = random(5);
+Serial.print ("note 2 = ");Serial.println(NOTE_ACTION_2); 
 }
 
 // READ KNOBS 
@@ -449,7 +587,7 @@ if (SEQUENCE_STEP%4==0){digitalWrite(greenLED1, HIGH);}else{digitalWrite(greenLE
 REPEAT_COUNT++;
 SEQUENCE_STEP++;
 NOTE=true;
-if (SEQUENCE_STEP>LOOP_LENGTH){
+if (SEQUENCE_STEP>LOOP_LENGTH-1){
  SEQUENCE_STEP = 0; 
  LOOP = true; 
 }

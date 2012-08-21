@@ -7,8 +7,8 @@ Random piano Sequencer
   
  Knobs: 
  0 = TEMPO
- 1 = number of notes changed each 128 note cycle
- 2 = mode selection 
+ 1 = unused 
+ 2 = unused  
  5 & 6 = min and max velocity
  3 = loop length 
  
@@ -81,6 +81,7 @@ int CONTROL_REFRESH = 2000;
 #define PPQ 24 // master PPQ of the sequencer 
 byte PLAY_DIVIDER = 3; //play a note every n parts 
 byte PLAY_COUNTER;
+boolean FROZEN = false;
 long loop_count = 0; 
 
 long OLD;
@@ -184,9 +185,9 @@ char ODDS_NAMES[ODDS_COUNT][15]=
   "Bossanova"};
 
 
-#define DIVIDER_COUNT 9
+#define DIVIDER_COUNT 6
 int DIVIDERS[DIVIDER_COUNT] = 
-{1,2,4,8,16,32,16,48,8};
+{1,2,4,8,16,32};
 
 
 //*************
@@ -215,15 +216,24 @@ void setup() {
 void loop() {
 
 if (loop_count%CONTROL_REFRESH == 0){  
-readKnobs();}
+readKnobs();
+boolean any_notes = false;
+for (int i=0; i<LOOP_LENGTH; i++){
+  if (SEQUENCE[2][i] > 0){
+   any_notes = true; 
+  }
+}
+if (any_notes == false){
+  addRandomNoteAt(random(LOOP_LENGTH));
+}
+}
 
 
 if(START == true){
     Serial.println("START");
-
 randomiseValues();
 defineActions();
-
+addRandomNoteAt(random(LOOP_LENGTH));
 START = false;
 }
 
@@ -237,9 +247,13 @@ FILL = false;
 
 if (NOTE == true){
 
-  selectAction(NOTE_ACTION_1, random(LOOP_LENGTH));
-  selectAction(NOTE_ACTION_2, random(LOOP_LENGTH));
+  if (SEQUENCE[2][SEQUENCE_STEP] <40){
+  selectAction(NOTE_ACTION_1, SEQUENCE_STEP);
+  };
 
+  if (SEQUENCE[2][SEQUENCE_STEP] >40){
+  selectAction(NOTE_ACTION_2, SEQUENCE_STEP);
+  }
 
 NOTE = false;  
 }
@@ -264,13 +278,17 @@ if (SECTION == true){ Serial.println("SECTION");
  
 defineActions();
 
+if (random(10)>8){
+randomLoopLength();
+Serial.print(" Loop length = ");
+Serial.println(LOOP_LENGTH);
+};
   
  SECTION = false;  
 }
 
 
 loop_count++;
-
 
 }
 
@@ -333,21 +351,23 @@ byte quantize(int scale, int note, int octave){
 // FREEZE / UNFREEZE 
 
 void freeze(){
- for(int i=0;i<ARRAY_SIZE;i++){
+if (FROZEN == false){
+ 
+  for(int i=0;i<ARRAY_SIZE;i++){
  for(int x=0;x<SEQUENCE_LAYERS;x++){ 
    FROZEN_SEQUENCE[x][i] =SEQUENCE [x][i];
  }} 
 digitalWrite(greenLED2, HIGH); 
+FROZEN = true;
 }
-
-
-void unFreeze(){
+else{
  for(int i=0;i<ARRAY_SIZE;i++){
  for(int x=0;x<SEQUENCE_LAYERS;x++){ 
    SEQUENCE [x][i]=FROZEN_SEQUENCE[x][i] ;
  }}   
 digitalWrite(greenLED2, LOW); 
-}
+FROZEN = false;
+}}
 
 // FILL ENTIRE LOOP WITH RANDOM NOTES 
 
@@ -388,6 +408,11 @@ Repeats exactly and does not check rhythm before adding a note.
 addRepeatedNote(note_position)
 = checks back for the last active note before the specified one. Does not loop around. 
 Checks rhythm and adds new note with same note/octave as the last, but new velocity. 
+
+randomLoopLength()
+= randomises the loop length 
+
+
 
 */
 
@@ -467,7 +492,11 @@ if(ODDS[ODDS_CHOICE][note_position]>50){
       break;
   }}}
   
-
+  void randomLoopLength(){
+   LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)]; 
+  }
+  
+#define ACTIONS_COUNT 9
 void selectAction(byte choice, byte note_position){
  switch (choice){
    case 0:
@@ -499,12 +528,16 @@ ODDS_CHOICE = random(ODDS_COUNT);
             Serial.print(" re-rhythm ");
    break;
    case 7:
-   FILL = true;
-            Serial.print (" fill ");
-
+fillRandom();
+Serial.print (" fill ");
    break;
-   
- }}
+   case 8:
+   freeze();
+Serial.print (" freeze ");
+   break;
+   case 9:
+   break;
+   }}
 
 
 
@@ -523,9 +556,11 @@ void randomiseValues(){
 MODE_CHOICE=random(MODE_COUNT);
 ODDS_CHOICE = random(ODDS_COUNT);
 DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
-BASE_TIME = random(16); 
+BASE_TIME = random(8); 
 if (random(4)>1){FILL = true;}else{FILL = false;};
 SECTION_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
+LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
+
 if (PRINT_SETTINGS == true){
 Serial.print(" Density = ");
 Serial.print(DENSITY);
@@ -538,27 +573,30 @@ Serial.print(ODDS_NAMES[ODDS_CHOICE]);
 Serial.print(" Section length = ");
 Serial.print(SECTION_LENGTH);
 Serial.print(" Mode = ");
-Serial.println(MODE_NAMES[MODE_CHOICE]);
+Serial.print(MODE_NAMES[MODE_CHOICE]);
+Serial.print(" Loop length = ");
+Serial.println(LOOP_LENGTH);
+
 }
 
 // DEFINE ACTIONS 
 void defineActions(){
- LOOP_ACTION_1 = random(9);
+ LOOP_ACTION_1 = random(ACTIONS_COUNT)+4;
 Serial.print ("loop 1 = ");Serial.println(LOOP_ACTION_1);
-LOOP_ACTION_2 = random(9);
+LOOP_ACTION_2 = random(ACTIONS_COUNT)+4;
 Serial.print ("loop 2 = ");Serial.println(LOOP_ACTION_2);
-NOTE_ACTION_1 = random(5);
+NOTE_ACTION_1 = random(ACTIONS_COUNT-4);
 Serial.print ("note 1 = ");Serial.println(NOTE_ACTION_1);
-NOTE_ACTION_2 = random(5);
+NOTE_ACTION_2 = random(ACTIONS_COUNT-4);
 Serial.print ("note 2 = ");Serial.println(NOTE_ACTION_2); 
 }
 
 // READ KNOBS 
 void readKnobs(){
  TEMPO = map(analogRead(0),0,1024,MIN_TEMPO,MAX_TEMPO);
-CHANGES = map(analogRead(1),0,1024,0,ARRAY_SIZE); 
+//CHANGES = map(analogRead(1),0,1024,0,ARRAY_SIZE); 
 //MODE_CHOICE = map(analogRead(2),0,1024,0,MODE_COUNT);
-LOOP_LENGTH = (analogRead(3)/128)*8;
+//LOOP_LENGTH = (analogRead(3)/128)*8;
 MIN_VELOCITY = map(analogRead(4),0,1024,1,127);
 MAX_VELOCITY = map(analogRead(5),0,1024,MIN_VELOCITY,127);
 

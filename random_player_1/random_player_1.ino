@@ -12,7 +12,7 @@ Random piano Sequencer
  5 & 6 = min and max velocity
  3 = loop length 
  
-Schematic in pot_box_schematic 
+Schematic in pot_box_schematic.
  
 To do: 
 Create collection of note change functions; 

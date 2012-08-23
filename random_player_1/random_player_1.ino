@@ -90,7 +90,12 @@ byte NOTE_ACTION_1;
 byte NOTE_ACTION_2;
 byte LOOP_ACTION_1;
 byte LOOP_ACTION_2;
+byte LOOP_EVERYNOTE_ACTION_1;
+byte LOOP_EVERYNOTE_ACTION_2;
 
+
+// FUNCTION DEFAULTS 
+void changeRandomNoteAt(int note_position, byte low_velocity = 0, byte high_velocity = 127);
 
 
 // FLOW CONTROL 
@@ -247,11 +252,13 @@ FILL = false;
 
 if (NOTE == true){
 
+  // NB - NOTE_ACTION_1 ACTS ON NOTES BELOW 40 VELOCITY, _2 ON NOTES ABOVE 40 VELOCITY 
+  
   if (SEQUENCE[2][SEQUENCE_STEP] <40){
   selectAction(NOTE_ACTION_1, SEQUENCE_STEP);
   };
 
-  if (SEQUENCE[2][SEQUENCE_STEP] >40){
+  if (SEQUENCE[2][SEQUENCE_STEP] >41){
   selectAction(NOTE_ACTION_2, SEQUENCE_STEP);
   }
 
@@ -261,9 +268,14 @@ NOTE = false;
 
 if (LOOP == true){Serial.println("LOOP");
 
-
   selectAction(LOOP_ACTION_1, random(LOOP_LENGTH));
   selectAction(LOOP_ACTION_2, random(LOOP_LENGTH));
+
+for (int x = 0; x < LOOP_LENGTH; x++){
+
+  selectAction(LOOP_EVERYNOTE_ACTION_1, x);
+    selectAction(LOOP_EVERYNOTE_ACTION_2, x);
+}
 
  
 LOOP = false;  
@@ -388,8 +400,14 @@ Document note creation/modification functions:
 addRandomNoteAt(note_position)
 = Checks to see if there is a note present. If not, assesses the rhythm system, throws a dice, and if successful, adds a new random note in the relevant position. 
 
-changeRandomNoteAt(note_position)
-= Checks to see if there is a note present. If there IS, assesses the rhythm system, throws a dice, and if successful, changes to a new random note in the relevant position. 
+changeRandomNoteAt(note_position,low_velocity,high_velocity)
+= Checks to see if there is a note present. 
+Optional: Checks whether note is above low_velocity. 
+Optional: Checks whether note is above low and below high_velocity. 
+If true, assesses the rhythm system, throws a dice, and 
+If dice throw is successful, changes to a new random note in the relevant position.
+If dice throw is unsuccessful, leave as was. 
+
 
 incrementNoteAt(note_positon)
 = raises note by one, raising octave after 7 notes, looping through octaves 
@@ -412,6 +430,7 @@ Checks rhythm and adds new note with same note/octave as the last, but new veloc
 randomLoopLength()
 = randomises the loop length 
 
+clearBelowVelocity(note_position, 
 
 
 */
@@ -426,8 +445,10 @@ void addRandomNoteAt(int note_position){
     SEQUENCE[2][note_position]= random(ODDS[ODDS_CHOICE][note_position]+27); // velocity 
 }}}
 
-void changeRandomNoteAt(int note_position){
-   if (note_position<ARRAY_SIZE && SEQUENCE[2][note_position] > 0){
+void changeRandomNoteAt(int note_position, byte low_velocity, byte high_velocity){
+   if (note_position<ARRAY_SIZE 
+   && SEQUENCE[2][note_position] > low_velocity
+   && SEQUENCE[2][note_position] <= high_velocity){
      if(random(DENSITY)<ODDS[ODDS_CHOICE][note_position]){
     byte newnote=random(7);
     byte newoctave = random(5)+3;
@@ -495,6 +516,9 @@ if(ODDS[ODDS_CHOICE][note_position]>50){
   void randomLoopLength(){
    LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)]; 
   }
+  
+  
+  
   
 #define ACTIONS_COUNT 9
 void selectAction(byte choice, byte note_position){
@@ -581,14 +605,12 @@ Serial.println(LOOP_LENGTH);
 
 // DEFINE ACTIONS 
 void defineActions(){
- LOOP_ACTION_1 = random(ACTIONS_COUNT)+4;
-Serial.print ("loop 1 = ");Serial.println(LOOP_ACTION_1);
+LOOP_ACTION_1 = random(ACTIONS_COUNT)+4;
 LOOP_ACTION_2 = random(ACTIONS_COUNT)+4;
-Serial.print ("loop 2 = ");Serial.println(LOOP_ACTION_2);
 NOTE_ACTION_1 = random(ACTIONS_COUNT-4);
-Serial.print ("note 1 = ");Serial.println(NOTE_ACTION_1);
 NOTE_ACTION_2 = random(ACTIONS_COUNT-4);
-Serial.print ("note 2 = ");Serial.println(NOTE_ACTION_2); 
+LOOP_EVERYNOTE_ACTION_1 = random(ACTIONS_COUNT-4);
+LOOP_EVERYNOTE_ACTION_2 = random(ACTIONS_COUNT-4);
 }
 
 // READ KNOBS 

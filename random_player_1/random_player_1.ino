@@ -24,7 +24,7 @@ Create collection of note change functions;
 	X add new note (random note/velocity/duration) 
 	add new note (note/velocity/duration related to previous note(s) - markov)
 	Add new note (note/velocity/duration related to rhythm system)
-	Change all notes above/below a specific velocity
+	X Change all notes above/below a specific velocity
 Create a system that allows new events to happen every n repetitions. 
 	i.e. not on every loop
 Create standard internal numbering system (i.e. 0-256) that can be applied to any variable.
@@ -83,6 +83,7 @@ byte PLAY_DIVIDER = 3; //play a note every n parts
 byte PLAY_COUNTER;
 boolean FROZEN = false;
 long loop_count = 0; 
+byte LOOP_STABILITY = 2; // How likely individual notes are to change as they play 
 
 long OLD;
 long NEW;
@@ -190,9 +191,9 @@ char ODDS_NAMES[ODDS_COUNT][15]=
   "Bossanova"};
 
 
-#define DIVIDER_COUNT 6
+#define DIVIDER_COUNT 9
 int DIVIDERS[DIVIDER_COUNT] = 
-{1,2,4,8,16,32};
+{1,2,4,8,16,32,48,64,128};
 
 
 //*************
@@ -252,15 +253,9 @@ FILL = false;
 
 if (NOTE == true){
 
-  // NB - NOTE_ACTION_1 ACTS ON NOTES BELOW 40 VELOCITY, _2 ON NOTES ABOVE 40 VELOCITY 
+  selectNoteAction(NOTE_ACTION_1, SEQUENCE_STEP);
+  selectNoteAction(NOTE_ACTION_2, SEQUENCE_STEP);
   
-  if (SEQUENCE[2][SEQUENCE_STEP] <40){
-  selectAction(NOTE_ACTION_1, SEQUENCE_STEP);
-  };
-
-  if (SEQUENCE[2][SEQUENCE_STEP] >41){
-  selectAction(NOTE_ACTION_2, SEQUENCE_STEP);
-  }
 
 NOTE = false;  
 }
@@ -268,14 +263,10 @@ NOTE = false;
 
 if (LOOP == true){Serial.println("LOOP");
 
-  selectAction(LOOP_ACTION_1, random(LOOP_LENGTH));
-  selectAction(LOOP_ACTION_2, random(LOOP_LENGTH));
+  selectSectionAction(LOOP_ACTION_1, random(LOOP_LENGTH));
+//  selectSectionAction(LOOP_ACTION_2, random(LOOP_LENGTH));
 
-for (int x = 0; x < LOOP_LENGTH; x++){
 
-  selectAction(LOOP_EVERYNOTE_ACTION_1, x);
-    selectAction(LOOP_EVERYNOTE_ACTION_2, x);
-}
 
  
 LOOP = false;  
@@ -287,6 +278,12 @@ SECTION = true;
 
 
 if (SECTION == true){ Serial.println("SECTION");
+ 
+ for (int x = 0; x < LOOP_LENGTH; x++){
+
+  selectNoteAction(LOOP_EVERYNOTE_ACTION_1, x);
+    selectNoteAction(LOOP_EVERYNOTE_ACTION_2, x);
+}
  
 defineActions();
 
@@ -520,8 +517,8 @@ if(ODDS[ODDS_CHOICE][note_position]>50){
   
   
   
-#define ACTIONS_COUNT 9
-void selectAction(byte choice, byte note_position){
+#define SECTION_ACTIONS_COUNT 9
+void selectSectionAction(byte choice, byte note_position){
  switch (choice){
    case 0:
    addRandomNoteAt(note_position);
@@ -544,16 +541,16 @@ void selectAction(byte choice, byte note_position){
          Serial.print(" repeat ");
    break;
    case 5:
-   simplifyNoteAt(note_position);
-         Serial.print(" simplify ");
+//   simplifyNoteAt(note_position);
+//         Serial.print(" simplify ");
    break;
    case 6:
 ODDS_CHOICE = random(ODDS_COUNT);
             Serial.print(" re-rhythm ");
    break;
    case 7:
-fillRandom();
-Serial.print (" fill ");
+//fillRandom();
+//Serial.print (" fill ");
    break;
    case 8:
    freeze();
@@ -562,6 +559,49 @@ Serial.print (" freeze ");
    case 9:
    break;
    }}
+
+
+#define NOTE_ACTIONS_COUNT 7
+void selectNoteAction(byte choice, byte note_position){
+ if(choice <= NOTE_ACTIONS_COUNT){
+  
+  switch (choice){
+   case 0:
+   addRandomNoteAt(note_position);
+   Serial.print(" Nadd ");
+   break;
+   case 1:
+   changeRandomNoteAt(note_position);
+   Serial.print(" Nchange ");
+   break;
+   case 2:
+   incrementNoteAt(note_position);
+      Serial.print(" Nup ");
+   break;
+   case 3:
+     decrementNoteAt(note_position); 
+           Serial.print(" Ndown ");
+   break;
+   case 4:
+   addRepeatedNote(note_position);
+         Serial.print(" Nrepeat ");
+   break;
+   case 5:
+//   simplifyNoteAt(note_position);
+//         Serial.print(" Nsimplify ");
+   break;
+   case 6:
+      changeRandomNoteAt(note_position,60);
+            Serial.print(" NchngHI ");
+   break;
+   case 7:
+      changeRandomNoteAt(note_position,0,60);
+Serial.print (" NchngLO ");
+   break;
+  }}
+else {}
+}
+
 
 
 
@@ -584,6 +624,7 @@ BASE_TIME = random(8);
 if (random(4)>1){FILL = true;}else{FILL = false;};
 SECTION_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
+LOOP_STABILITY = random(10);
 
 if (PRINT_SETTINGS == true){
 Serial.print(" Density = ");
@@ -598,6 +639,8 @@ Serial.print(" Section length = ");
 Serial.print(SECTION_LENGTH);
 Serial.print(" Mode = ");
 Serial.print(MODE_NAMES[MODE_CHOICE]);
+Serial.print(" Loop stability = ");
+Serial.print(LOOP_STABILITY);
 Serial.print(" Loop length = ");
 Serial.println(LOOP_LENGTH);
 
@@ -605,12 +648,18 @@ Serial.println(LOOP_LENGTH);
 
 // DEFINE ACTIONS 
 void defineActions(){
-LOOP_ACTION_1 = random(ACTIONS_COUNT)+4;
-LOOP_ACTION_2 = random(ACTIONS_COUNT)+4;
-NOTE_ACTION_1 = random(ACTIONS_COUNT-4);
-NOTE_ACTION_2 = random(ACTIONS_COUNT-4);
-LOOP_EVERYNOTE_ACTION_1 = random(ACTIONS_COUNT-4);
-LOOP_EVERYNOTE_ACTION_2 = random(ACTIONS_COUNT-4);
+LOOP_ACTION_1 = random(SECTION_ACTIONS_COUNT);
+LOOP_ACTION_2 = random(SECTION_ACTIONS_COUNT);
+NOTE_ACTION_1 = random(NOTE_ACTIONS_COUNT*LOOP_STABILITY); 
+NOTE_ACTION_2 = random(NOTE_ACTIONS_COUNT*LOOP_STABILITY);
+Serial.println("");
+Serial.print ("note action 1 = ");
+Serial.println (NOTE_ACTION_1);
+Serial.print ("note action 2 = ");
+Serial.println (NOTE_ACTION_2);
+
+LOOP_EVERYNOTE_ACTION_1 = random(NOTE_ACTIONS_COUNT);
+LOOP_EVERYNOTE_ACTION_2 = random(NOTE_ACTIONS_COUNT);
 }
 
 // READ KNOBS 

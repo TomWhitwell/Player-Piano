@@ -97,6 +97,7 @@ byte LOOP_EVERYNOTE_ACTION_2;
 
 // FUNCTION DEFAULTS 
 void changeRandomNoteAt(int note_position, byte low_velocity = 0, byte high_velocity = 127);
+void clearNote(int note_position, byte low_velocity = 0, byte high_velocity = 127);
 
 
 // FLOW CONTROL 
@@ -125,7 +126,7 @@ int SEQUENCE_STEP;
 
 
 //QUANTISATION
-#define MODE_COUNT 18 
+#define MODE_COUNT 19 
 byte MODES[MODE_COUNT][12]= {
   {0,2,4,6,8,10,12},          // whole tone 
   {0,2,4,5,7,9,11,12},        // major 
@@ -144,6 +145,9 @@ byte MODES[MODE_COUNT][12]= {
   {0,1,4,5,7,8,11,12},        // gypsy
   {0,2,3,5,7,9,10,12},        // dorian 
   {0,2,4,5,7,8,11,12},        // ethiopian 
+  {-36,-24,-12,0,0,12,24,36},        // octave 
+  {-12,-5,0,7,12,19,24} // fifths 
+  
 };  
 
 char MODE_NAMES[MODE_COUNT][12]=
@@ -164,7 +168,9 @@ char MODE_NAMES[MODE_COUNT][12]=
 "Jewish",
 "Gypsy",
 "Dorian",
-"Ethiopian"};
+"Ethiopian",
+"Octaves",
+"Fifths"};
 
 #define ODDS_COUNT 6
 byte ODDS[ODDS_COUNT][ARRAY_SIZE]={
@@ -193,7 +199,7 @@ char ODDS_NAMES[ODDS_COUNT][15]=
 
 #define DIVIDER_COUNT 9
 int DIVIDERS[DIVIDER_COUNT] = 
-{1,2,4,8,16,32,48,64,128};
+{4,6,8,12,16,32,48,64,128};
 
 
 //*************
@@ -254,7 +260,7 @@ FILL = false;
 if (NOTE == true){
 
   selectNoteAction(NOTE_ACTION_1, SEQUENCE_STEP);
-  selectNoteAction(NOTE_ACTION_2, SEQUENCE_STEP);
+//  selectNoteAction(NOTE_ACTION_2, SEQUENCE_STEP);
   
 
 NOTE = false;  
@@ -427,7 +433,10 @@ Checks rhythm and adds new note with same note/octave as the last, but new veloc
 randomLoopLength()
 = randomises the loop length 
 
-clearBelowVelocity(note_position, 
+clearNote(note_position, low_velocity, high_velocity)
+= checks to see if note exists. 
+If note exists, check to see if velocity is above low_velocity and below high_velocity. 
+If so, remove note. 
 
 
 */
@@ -514,10 +523,14 @@ if(ODDS[ODDS_CHOICE][note_position]>50){
    LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)]; 
   }
   
+  void clearNote(int note_position, byte low_velocity, byte high_velocity){ 
+  if (SEQUENCE[2][note_position] > low_velocity && SEQUENCE[2][note_position] <= high_velocity){
+  SEQUENCE[2][note_position] = 0;
+  }
+}
   
   
-  
-#define SECTION_ACTIONS_COUNT 9
+#define SECTION_ACTIONS_COUNT 12
 void selectSectionAction(byte choice, byte note_position){
  switch (choice){
    case 0:
@@ -541,29 +554,42 @@ void selectSectionAction(byte choice, byte note_position){
          Serial.print(" repeat ");
    break;
    case 5:
-//   simplifyNoteAt(note_position);
-//         Serial.print(" simplify ");
+   simplifyNoteAt(note_position);
+         Serial.print(" simplify ");
    break;
    case 6:
 ODDS_CHOICE = random(ODDS_COUNT);
             Serial.print(" re-rhythm ");
    break;
    case 7:
-//fillRandom();
-//Serial.print (" fill ");
+fillRandom();
+Serial.print (" fill ");
    break;
    case 8:
    freeze();
 Serial.print (" freeze ");
    break;
-   case 9:
+      case 9:
+    clearNote(note_position);
+Serial.print (" CLR ");
    break;
+   case 10:
+    clearNote(note_position,64);
+Serial.print (" CLRhi ");
+   break;
+   case 11:
+    clearNote(note_position,0,64);
+Serial.print (" CLRlo ");
+   break;
+
+   default: 
+   Serial.print (".");
+break;
    }}
 
 
-#define NOTE_ACTIONS_COUNT 7
+#define NOTE_ACTIONS_COUNT 8
 void selectNoteAction(byte choice, byte note_position){
- if(choice <= NOTE_ACTIONS_COUNT){
   
   switch (choice){
    case 0:
@@ -587,8 +613,8 @@ void selectNoteAction(byte choice, byte note_position){
          Serial.print(" Nrepeat ");
    break;
    case 5:
-//   simplifyNoteAt(note_position);
-//         Serial.print(" Nsimplify ");
+   simplifyNoteAt(note_position);
+         Serial.print(" Nsimplify ");
    break;
    case 6:
       changeRandomNoteAt(note_position,60);
@@ -598,8 +624,10 @@ void selectNoteAction(byte choice, byte note_position){
       changeRandomNoteAt(note_position,0,60);
 Serial.print (" NchngLO ");
    break;
-  }}
-else {}
+    default: 
+   Serial.print (".");
+   break;
+  }
 }
 
 
@@ -617,11 +645,13 @@ return velocity;
 
 // RANDOMISE MASTER VARIABLES 
 void randomiseValues(){
-MODE_CHOICE=random(MODE_COUNT);
+//MODE_CHOICE=random(MODE_COUNT);
+MODE_CHOICE=18;
+
 ODDS_CHOICE = random(ODDS_COUNT);
 DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
 BASE_TIME = random(8); 
-if (random(4)>1){FILL = true;}else{FILL = false;};
+if (random(3)>1){FILL = true;}else{FILL = false;};
 SECTION_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 LOOP_STABILITY = random(10);

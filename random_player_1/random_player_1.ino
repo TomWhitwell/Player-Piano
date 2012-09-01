@@ -63,6 +63,7 @@ int TEMPO  = 120;
 int MAX_TEMPO=400;
 int MIN_TEMPO = 8;
 int PERIOD; 
+byte LONGEST_NOTE;
 int DENSITY =100; // 100 = average, 200 = low, 50 = high
 int MAX_DENSITY = 200;
 int MIN_DENSITY = 10;
@@ -112,7 +113,7 @@ int LOOPS_IN_SECTION = 16;
 
 
 // holder for the sequences  
-#define SEQUENCE_LAYERS 3 //0=note 1=octave 2=velocity
+#define SEQUENCE_LAYERS 4 //0=note 1=octave 2=velocity 3 = duration 
 #define VOICE_COUNT 16 // maximum polyphony before note off system breaks down (to limit memory use)  
 byte SEQUENCE[SEQUENCE_LAYERS][ARRAY_SIZE];   
 byte FROZEN_SEQUENCE[SEQUENCE_LAYERS][ARRAY_SIZE];  
@@ -394,6 +395,8 @@ for(int fill_step=0;fill_step<ARRAY_SIZE;fill_step++){
     SEQUENCE[0][fill_step]= newnote; // note 
     SEQUENCE[1][fill_step]= newoctave;  // octave 
     SEQUENCE[2][fill_step]= random(ODDS[ODDS_CHOICE][fill_step]+27); // velocity 
+    SEQUENCE[3][fill_step]= random(LONGEST_NOTE); // duration 
+
 }}}
 
 
@@ -449,6 +452,8 @@ void addRandomNoteAt(int note_position){
     SEQUENCE[0][note_position]= newnote; // note 
     SEQUENCE[1][note_position]= newoctave;  // octave 
     SEQUENCE[2][note_position]= random(ODDS[ODDS_CHOICE][note_position]+27); // velocity 
+    SEQUENCE[3][note_position]= random(LONGEST_NOTE); // duration 
+
 }}}
 
 void changeRandomNoteAt(int note_position, byte low_velocity, byte high_velocity){
@@ -461,6 +466,8 @@ void changeRandomNoteAt(int note_position, byte low_velocity, byte high_velocity
     SEQUENCE[0][note_position]= newnote; // note 
     SEQUENCE[1][note_position]= newoctave;  // octave 
     SEQUENCE[2][note_position]= random(ODDS[ODDS_CHOICE][note_position]+27); // velocity 
+    SEQUENCE[3][note_position]= random(LONGEST_NOTE); // duration 
+
 }}}
 
 
@@ -488,11 +495,15 @@ void simplifyNoteAt(int note_position){
 if(ODDS[ODDS_CHOICE][note_position]>50){
  SEQUENCE[0][note_position] = 0;
  SEQUENCE[1][note_position] = 5;
- SEQUENCE[2][note_position] = 50;}
+ SEQUENCE[2][note_position] = 50;
+SEQUENCE[3][note_position]= 1; 
+}
  else{
  SEQUENCE[0][note_position] = 0;
  SEQUENCE[1][note_position] = 4;
- SEQUENCE[2][note_position] = 40;}
+ SEQUENCE[2][note_position] = 40;
+ SEQUENCE[3][note_position]= 4; 
+}
    
  }
 
@@ -514,7 +525,8 @@ if(ODDS[ODDS_CHOICE][note_position]>50){
     SEQUENCE[0][note_position]= SEQUENCE[0][i]; // note 
     SEQUENCE[1][note_position]= SEQUENCE[1][i];  // octave 
     SEQUENCE[2][note_position]= random(ODDS[ODDS_CHOICE][note_position]+27); // velocity 
-         }
+    SEQUENCE[3][note_position]= SEQUENCE[3][i]; 
+       }
     }
       break;
   }}}
@@ -645,12 +657,10 @@ return velocity;
 
 // RANDOMISE MASTER VARIABLES 
 void randomiseValues(){
-//MODE_CHOICE=random(MODE_COUNT);
-MODE_CHOICE=18;
-
+MODE_CHOICE=random(MODE_COUNT);
 ODDS_CHOICE = random(ODDS_COUNT);
 DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
-BASE_TIME = random(8); 
+LONGEST_NOTE = random(16); 
 if (random(3)>1){FILL = true;}else{FILL = false;};
 SECTION_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
@@ -661,8 +671,8 @@ Serial.print(" Density = ");
 Serial.print(DENSITY);
 Serial.print(" fill = ");
 Serial.print(FILL);
-Serial.print(" Base Times = ");
-Serial.print(BASE_TIME);}
+Serial.print(" Longest Note = ");
+Serial.print(LONGEST_NOTE);}
 Serial.print(" Rhythm = ");
 Serial.print(ODDS_NAMES[ODDS_CHOICE]);
 Serial.print(" Section length = ");
@@ -715,10 +725,8 @@ void setTimer(int beatsPerMinute){
 
 void playSequenceNote(){
 if (PLAY_COUNTER == PLAY_DIVIDER){
-
 byte velocity = getVelocity(SEQUENCE[2][SEQUENCE_STEP]);
-
-int note_length = PERIOD*PLAY_DIVIDER*BASE_TIME;
+int note_length = PERIOD*SEQUENCE[3][SEQUENCE_STEP]*PLAY_DIVIDER; 
 byte this_note = quantize(MODE_CHOICE, SEQUENCE[0][SEQUENCE_STEP], SEQUENCE[1][SEQUENCE_STEP]);
 playNote(0x90, this_note,velocity,note_length);
 noteKill();

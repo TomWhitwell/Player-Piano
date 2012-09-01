@@ -128,7 +128,7 @@ int SEQUENCE_STEP;
 
 //QUANTISATION
 #define MODE_COUNT 19 
-byte MODES[MODE_COUNT][12]= {
+char MODES[MODE_COUNT][12]= {
   {0,2,4,6,8,10,12},          // whole tone 
   {0,2,4,5,7,9,11,12},        // major 
   {0,2,4,5,8,9,11,12},        // harmonic major 
@@ -198,9 +198,16 @@ char ODDS_NAMES[ODDS_COUNT][15]=
   "Bossanova"};
 
 
-#define DIVIDER_COUNT 9
-int DIVIDERS[DIVIDER_COUNT] = 
-{4,6,8,12,16,32,48,64,128};
+#define DIVIDER_COUNT 6
+byte DIVIDERS[DIVIDER_COUNT] = 
+{4,6,8,12,16,32};
+
+
+#define CHORD_COUNT 3
+char CHORD[CHORD_COUNT][5]={
+{0,2,4}, // root third fifth 
+{0,4,6}}; //fifth?
+
 
 
 //*************
@@ -234,6 +241,7 @@ boolean any_notes = false;
 for (int i=0; i<LOOP_LENGTH; i++){
   if (SEQUENCE[2][i] > 0){
    any_notes = true; 
+   break;
   }
 }
 if (any_notes == false){
@@ -260,8 +268,11 @@ FILL = false;
 
 if (NOTE == true){
 
+ NOTE_ACTION_1 = map(analogRead(1),0,1024,0,20);
+NOTE_ACTION_2 = map(analogRead(2),0,1024,0,20);
+  
   selectNoteAction(NOTE_ACTION_1, SEQUENCE_STEP);
-//  selectNoteAction(NOTE_ACTION_2, SEQUENCE_STEP);
+  selectNoteAction(NOTE_ACTION_2, SEQUENCE_STEP);
   
 
 NOTE = false;  
@@ -271,7 +282,7 @@ NOTE = false;
 if (LOOP == true){Serial.println("LOOP");
 
   selectSectionAction(LOOP_ACTION_1, random(LOOP_LENGTH));
-//  selectSectionAction(LOOP_ACTION_2, random(LOOP_LENGTH));
+  selectSectionAction(LOOP_ACTION_2, random(LOOP_LENGTH));
 
 
 
@@ -495,7 +506,7 @@ void simplifyNoteAt(int note_position){
 if(ODDS[ODDS_CHOICE][note_position]>50){
  SEQUENCE[0][note_position] = 0;
  SEQUENCE[1][note_position] = 5;
- SEQUENCE[2][note_position] = 50;
+ SEQUENCE[2][note_position] = 70;
 SEQUENCE[3][note_position]= 1; 
 }
  else{
@@ -531,8 +542,37 @@ SEQUENCE[3][note_position]= 1;
       break;
   }}}
   
+  void drunkenRepeat(int note_position){
+    if (note_position > 1){
+   for (int i=note_position-1; i>=0;i--){
+    if(SEQUENCE[2][i]>0){
+         if(random(DENSITY)<ODDS[ODDS_CHOICE][note_position]){
+    SEQUENCE[0][note_position]= SEQUENCE[0][i]+random(3)-1; // note 
+ if (SEQUENCE[0][note_position] == 255){
+   SEQUENCE[0][note_position] = 7;
+ }
+ 
+    if (SEQUENCE[0][note_position]>7){
+  SEQUENCE[0][note_position] = 0;
+  SEQUENCE[1][note_position]++;}
+  if (SEQUENCE[1][note_position] > 8){
+    SEQUENCE[1][note_position] = 3;
+}
+    
+    SEQUENCE[1][note_position]= SEQUENCE[1][i];  // octave 
+    SEQUENCE[2][note_position]= SEQUENCE[2][i]; // velocity 
+    SEQUENCE[3][note_position]= SEQUENCE[3][i]; 
+       }
+    }
+      break;
+  }}}
+
+
   void randomLoopLength(){
    LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)]; 
+   Serial.print(" Loop length = ");
+Serial.println(LOOP_LENGTH);
+
   }
   
   void clearNote(int note_position, byte low_velocity, byte high_velocity){ 
@@ -542,7 +582,7 @@ SEQUENCE[3][note_position]= 1;
 }
   
   
-#define SECTION_ACTIONS_COUNT 12
+#define SECTION_ACTIONS_COUNT 13
 void selectSectionAction(byte choice, byte note_position){
  switch (choice){
    case 0:
@@ -593,14 +633,17 @@ Serial.print (" CLRhi ");
     clearNote(note_position,0,64);
 Serial.print (" CLRlo ");
    break;
-
+   case 12:
+   drunkenRepeat(note_position);
+Serial.print (" Drunken ");
+break;
    default: 
    Serial.print (".");
 break;
    }}
 
 
-#define NOTE_ACTIONS_COUNT 8
+#define NOTE_ACTIONS_COUNT 9
 void selectNoteAction(byte choice, byte note_position){
   
   switch (choice){
@@ -636,6 +679,10 @@ void selectNoteAction(byte choice, byte note_position){
       changeRandomNoteAt(note_position,0,60);
 Serial.print (" NchngLO ");
    break;
+   case 8:
+   drunkenRepeat(note_position);
+Serial.print (" Drunken ");
+break;
     default: 
    Serial.print (".");
    break;
@@ -661,7 +708,7 @@ MODE_CHOICE=random(MODE_COUNT);
 ODDS_CHOICE = random(ODDS_COUNT);
 DENSITY = (random(MAX_DENSITY-MIN_DENSITY))+MIN_DENSITY; 
 LONGEST_NOTE = random(16); 
-if (random(3)>1){FILL = true;}else{FILL = false;};
+if (random(5)>1){FILL = true;}else{FILL = false;};
 SECTION_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 LOOP_LENGTH = DIVIDERS[random(DIVIDER_COUNT)];
 LOOP_STABILITY = random(10);
@@ -692,14 +739,19 @@ LOOP_ACTION_1 = random(SECTION_ACTIONS_COUNT);
 LOOP_ACTION_2 = random(SECTION_ACTIONS_COUNT);
 NOTE_ACTION_1 = random(NOTE_ACTIONS_COUNT*LOOP_STABILITY); 
 NOTE_ACTION_2 = random(NOTE_ACTIONS_COUNT*LOOP_STABILITY);
+LOOP_EVERYNOTE_ACTION_1 = map(analogRead(1),0,1024,0,NOTE_ACTIONS_COUNT+2);
+LOOP_EVERYNOTE_ACTION_2 = map(analogRead(2),0,1024,0,NOTE_ACTIONS_COUNT+2);
+
+
+
 Serial.println("");
 Serial.print ("note action 1 = ");
 Serial.println (NOTE_ACTION_1);
 Serial.print ("note action 2 = ");
 Serial.println (NOTE_ACTION_2);
 
-LOOP_EVERYNOTE_ACTION_1 = random(NOTE_ACTIONS_COUNT);
-LOOP_EVERYNOTE_ACTION_2 = random(NOTE_ACTIONS_COUNT);
+//LOOP_EVERYNOTE_ACTION_1 = random(NOTE_ACTIONS_COUNT);
+//LOOP_EVERYNOTE_ACTION_2 = random(NOTE_ACTIONS_COUNT);
 }
 
 // READ KNOBS 

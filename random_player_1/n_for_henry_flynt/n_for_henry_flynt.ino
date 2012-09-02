@@ -3,49 +3,19 @@
 
 
 /*
-Random piano Sequencer 
+Henry Flynt Generator 
+inspired by La Monte Young 
   
  Knobs: 
  0 = TEMPO
- 1 = unused 
- 2 = unused  
+ 1 =  
+ 2 =  
+3 =  
  5 & 6 = min and max velocity
- 3 = loop length 
  
 Schematic in pot_box_schematic.
  
 To do: 
-Create collection of note change functions; 
-	X change note randomly (range)
-	change velocity randomly (range) 
-	change duration randomly (range) 
-	Change note/velocity/duration based on current value (is this a special case of markov below?)
-	remove note 
-	X add new note (random note/velocity/duration) 
-	add new note (note/velocity/duration related to previous note(s) - markov)
-	Add new note (note/velocity/duration related to rhythm system)
-	X Change all notes above/below a specific velocity
-Create a system that allows new events to happen every n repetitions. 
-	i.e. not on every loop
-Create standard internal numbering system (i.e. 0-256) that can be applied to any variable.
-	ie create a LFO which can be applied to note/velocity/duration 
-	build markov chain around this variable
-		so you can repeat/learn velocity chains as easily as note chains 
-	BUT: How to connect 0-256 number with 0-7+0-8 note+octave system? 
-System to change a particular global variable for a period 
-	i.e. change base note / mode / TEMPO for n bars, then revert 
-	Is it a temporary change vs a permanent change - maybe with a buffer to reverse the change? 
-Rework rhythm system - enable CHANGES of rhythm 
-	(Could be covered by note change function above, i.e. ChangeVelocityByRhythm)
-X Rework timing system. 
-        Use 24ppq system, to enable midi clock output? 
-Rework Quantise system to ensure it correctly handles differently-sized scales
-Rework Rhythm system to use smaller arrays 
-Create chord system, scanning current notes playing and running chords over the top
-X freeze() and unFreeze() = copies current loop into a buffer. Unfreeze copies it back into the live loop. 
-
-Experiments to try: 
-        Create change systems for note/velocity/duration and attach them to knobs 
 
  */
 
@@ -223,6 +193,10 @@ void setup() {
     pinMode(greenLED1,OUTPUT);
     pinMode(greenLED2,OUTPUT);
     setTimer(TEMPO);
+    
+
+
+
   FlexiTimer2::start(); 
 
 
@@ -582,25 +556,6 @@ Serial.println(LOOP_LENGTH);
 }
   
   
-  void pedalDown(){
- byte status_byte = 176; // control change on channel 1
-byte cc_number=64; // pedal control 
-byte data_send = 127; // pedal DOWN
-Serial1.print(status_byte); // send status byte
-Serial1.print(cc_number); // send CC number
-Serial1.print(data_send); // send data value 
-}
-
-void pedalUp(){
- byte status_byte = 176; // control change on channel 1
-byte cc_number=64; // pedal control 
-byte data_send = 1; // pedal UP
-Serial1.print(status_byte); // send status byte
-Serial1.print(cc_number); // send CC number
-Serial1.print(data_send); // send data value 
-}
-  
-  
 #define SECTION_ACTIONS_COUNT 13
 void selectSectionAction(byte choice, byte note_position){
  switch (choice){
@@ -817,4 +772,20 @@ PLAY_COUNTER = 0;
 PLAY_COUNTER++;
 }
 
+void pedalDown(){
+ byte status_byte = 176; // control change on channel 1
+byte cc_number=64; // pedal control 
+byte data_send = 127; // pedal DOWN
+Serial1.print(status_byte); // send status byte
+Serial1.print(cc_number); // send CC number
+Serial1.print(data_send); // send data value 
+}
 
+void pedalUp(){
+ byte status_byte = 176; // control change on channel 1
+byte cc_number=64; // pedal control 
+byte data_send = 1; // pedal UP
+Serial1.print(status_byte); // send status byte
+Serial1.print(cc_number); // send CC number
+Serial1.print(data_send); // send data value 
+}
